@@ -1,0 +1,29 @@
+.nav{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: auto;
+    width: auto;
+    margin: 0px 50px;
+    flex-direction: row;
+}
+
+.line{
+    display: flex;
+    height: 1px;
+    margin: 10px 0px 20px 0px;
+    width: 100%;
+    background-color: rgba(128, 128, 128, 0.2);
+}
+.loginbtn{
+    margin: 0;
+    font-size:18px;
+    background-color: rgb(229, 54, 42);
+    color: white;
+    padding: 9px 18px;
+    border: none;
+    border-radius: 25px;
+    cursor: pointer;
+    transition: color 0.3s ease;
+    transition: background-color 0.3s ease;
+}

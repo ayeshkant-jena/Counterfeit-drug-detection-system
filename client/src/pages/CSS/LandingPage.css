@@ -1,0 +1,110 @@
+.landing-container{
+    width: auto;
+    height: 100%;
+    margin: 0 150px;
+    font-family: "Nunito", sans-serif;
+}
+
+.hero-section{
+    display: flex;
+    align-items: center;
+    width: 100%;
+    height: 450px;
+    overflow: hidden;
+    position: relative;
+}
+
+.hero-section img{
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: 0% 64%;
+    display: block;
+    border-radius: 20px;
+}
+
+.hero-section::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.2) 0%, rgba(0, 0, 0, 0.4) 100%);
+    z-index: 1;
+    pointer-events: none;
+    border-radius: 20px;
+}
+
+.text-over-img{
+    /* position: absolute;
+    padding: 10px 30px; */
+    position: absolute;
+    top: 50%;
+    left: 32%;
+    transform: translate(-50%, -50%);
+    z-index: 2;
+    /* text-align: center; */
+    color: white;
+    padding: 20px;
+}
+.hero-text{
+    width: 600px;
+    height: auto;
+    color: white;
+}
+.btn-scan-now{
+    padding: 10px 20px;
+    font-size: 25px;
+    border-radius: 15px;
+    border: none;
+    color: white;
+    background-color: rgb(229, 54, 42);
+    cursor: pointer;
+    text-decoration: none;
+}
+
+p{
+    font-size: 18px;
+}
+.btn-hiw{
+    padding: 10px 20px;
+    font-size: 18px;
+    border-radius: 10px;
+    border: none;
+    color: white;
+    background-color: rgb(229, 54, 42);
+    cursor: pointer;
+}
+.features-grid{
+    margin-top: 30px;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr; /* 3 equal columns */
+    gap: 30px; /* Optional: spacing between parts */
+}
+.features{
+    height: 300px;
+    padding: 0px;
+    border-radius: 20px;
+    /* background-color: lightgray; */
+    text-align: center;
+}
+.features img{
+    width: 100%;
+    height: 70%;
+    object-fit: cover;        /* Crop without stretching */
+    object-position: center;  /* Center crop */
+    border-radius: 10px;      /* Optional: rounded corners */
+    display: block;
+
+}
+
+.features h4 {
+  font-size: 1.2rem;
+  margin: 10px 0 5px;
+}
+
+.features p {
+  font-size: 0.95rem;
+  color: #555;
+}

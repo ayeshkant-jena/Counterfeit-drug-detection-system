@@ -1,0 +1,115 @@
+.report-container{
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    width: auto;
+    height: 100%;
+    margin: 0 150px;
+    font-family: "Nunito", sans-serif;
+}
+.report-container h1{
+    /* text-align: center; */
+    font-size: 40px;
+    margin: 10px 0px;
+}
+
+.upload-box {
+    border: 2px dotted #aaa;
+    padding: 40px;
+    width: auto;
+    /* max-width: 500px; */
+    height: 200px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    border-radius: 10px;
+    text-align: center;
+    background-color: #fafafa;
+    transition: background-color 0.3s ease;
+}
+
+.upload-box:hover {
+    background-color: #f0f0f0;
+}
+
+.hidden-input {
+    display: none;
+}
+
+.upload-content p {
+    font-size: 1rem;
+    margin-bottom: 10px;
+}
+
+.upload-content button {
+    padding: 8px 16px;
+    /* background-color: #007bff; */
+    background-color: rgb(200, 200, 200);
+    color: black;
+    border: none;
+    border-radius: 5px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.report-grid{
+    margin-top: 30px;
+    display: grid;
+    grid-template-columns: 1.5fr 1fr; /* 3 equal columns */
+    gap: 30px; /* Optional: spacing between parts */
+}
+.reports{
+    display: flex;
+    flex-direction: column;
+    /* height: 300px; */
+    padding: 10px 70px;
+    border-radius: 20px;
+    /* background-color: lightgray; */
+    /* text-align: center; */
+}
+.reports input{
+    margin: 0px 30px 20px 0px;
+    font-size: 18px;
+    padding: 10px;
+    border: none;
+    border: none;
+    outline: none;
+    background-color: rgb(244, 240, 239);
+}
+
+.reports textarea{
+    height: 100%;
+    width: auto;
+    padding: 10px;
+    background-color: rgb(244, 240, 239);
+    border: none;
+    outline: none;
+}
+
+.submit-btns{
+    display: flex;
+    margin: 20px 50px;
+    justify-content: center;
+    gap: 30px;
+}
+.cancel-report{
+    background-color: rgb(200, 200, 200);
+    color: black;
+    border: none;
+    font-size: 16px;
+    font-weight: bold;
+    padding: 10px 20px;
+    border-radius: 10px;
+    cursor: pointer;
+}
+.submit-report{
+    background-color: rgb(229, 54, 42);
+    color: white;
+    font-size: 16px;
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
+    padding: 10px 20px;
+    border-radius: 10px;
+}

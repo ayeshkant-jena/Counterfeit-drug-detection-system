@@ -1,0 +1,9 @@
+.medicine-container{
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    width: auto;
+    height: 100%;
+    margin: 0 150px;
+    font-family: "Nunito", sans-serif;
+}

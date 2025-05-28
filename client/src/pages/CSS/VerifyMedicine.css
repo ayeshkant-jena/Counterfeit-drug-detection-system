@@ -1,0 +1,128 @@
+.verify-container{
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    width: auto;
+    height: 100%;
+    margin: 0 150px;
+    font-family: "Nunito", sans-serif;
+}
+.section{
+    display: flex;
+    width: 100%;
+    flex-direction: column;
+}
+.section h1{
+    text-align: center;
+}
+.section p{
+    text-align: center;
+    font-size: 14px;
+}
+.btn-upload{
+    display: flex;
+    justify-content: stretch;
+}
+.upload-btn{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    max-width: 400px; /* Optional: control width */
+    margin: 20px auto; /* Center the button container */
+    gap: 50px;
+}
+.upload-btn a {
+    flex: 1;
+    text-align: center;
+    text-decoration: none;
+    padding: 12px 20px;
+    background-color: rgb(244, 240, 239);
+    color: rgb(22, 17, 17);
+    border-radius: 8px;
+    margin: 0 10px;
+    font-weight: bold;
+    transition: background 0.3s ease;
+}
+
+.upload-btn a:hover {
+    background-color: rgb(200, 200, 200);
+}
+
+.srno-input{
+    width: 350px;
+    font-size: 18px;
+    padding: 10px 20px;
+    border-radius: 10px;
+    border: none;
+    outline: none;
+    background-color: rgb(244, 240, 239);
+}
+
+.verify-btn{
+    display: flex;
+    justify-content: end;
+    padding: 10px;
+}
+.verify-btn button{
+    font-size: 18px;
+    padding: 10px 20px;
+    border-radius: 10px;
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.result {
+    display: flex;
+    flex-direction: column;
+    width: 500px; /* or 100%, depending on layout */
+    margin: 0 auto; /* optional: center the section */
+}
+
+.result-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    margin-top: 30px;
+}
+
+.results {
+    display: flex;
+    background-color: #f9f9f9;
+    border-radius: 10px;
+    padding: 15px;
+    align-items: center;
+    gap: 15px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.results img {
+    width: 30px;
+    height: 30px;
+    object-fit: cover;
+    border-radius: 10px;
+    flex-shrink: 0;
+}
+
+.results-text {
+    display: flex;
+    flex-direction: column;
+}
+
+.results h4 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.results p {
+    margin: 5px 0 0;
+    font-size: 0.9rem;
+    color: #555;
+}
+
+.results p {
+    font-size: 0.95rem;
+    color: #555;
+}
