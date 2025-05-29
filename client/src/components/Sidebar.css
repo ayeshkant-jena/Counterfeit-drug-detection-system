@@ -1,0 +1,33 @@
+/* components/Sidebar.css */
+.sidebar {
+  width: 220px;
+  background-color: #f4f4f4;
+  height: 100vh;
+  padding: 20px;
+  border-right: 1px solid #ccc;
+}
+
+.sidebar h2 {
+  margin-bottom: 20px;
+  font-size: 22px;
+  color: #333;
+}
+
+.sidebar ul {
+  list-style: none;
+  padding: 0;
+}
+
+.sidebar li {
+  margin-bottom: 15px;
+}
+
+.sidebar a {
+  text-decoration: none;
+  color: #222;
+  font-weight: 500;
+}
+
+.sidebar a:hover {
+  color: #007bff;
+}

@@ -2,12 +2,15 @@
 import { useEffect, useState } from "react";
 import Sidebar from "./Sidebar";
 import Navbar from "./Navbar";
-import ManufacturerView from "./RoleBasedViews/ManufacturerView";
+import './Dashboard.css';
+import ManufacturerView from "./RoleBasedViews/ManufacturerDashboard/ManufacturerView";
 import DistributorView from "./RoleBasedViews/DistributorView";
 import RetailerView from "./RoleBasedViews/RetailerView";
 
- const Dashboard = () => {
+  const Dashboard = () => {
   const [user, setUser] = useState(null);
+
+  const role = JSON.parse(localStorage.getItem("user"))?.role;
 
   useEffect(() => {
     // Simulated JWT decoding or fetch from backend
@@ -17,16 +20,25 @@ import RetailerView from "./RoleBasedViews/RetailerView";
 
   if (!user) return <div>Loading...</div>;
 
+  const renderDashboard = () => {
+    switch (role) {
+      case 'Manufacturer':
+        return <ManufacturerView />;
+      case 'Distributor':
+        return <DistributorView />;
+      case 'Retailer':
+        return <RetailerView />;
+      default:
+        return <div>Unauthorized Role</div>;
+    }
+  };
+
   return (
-    <div className="flex h-screen">
-      <Sidebar role={user.role} />
-      <div className="flex flex-col flex-grow">
-        <Navbar username={user.name} role={user.role} />
-        <div className="p-4 flex-grow overflow-y-auto">
-          {user.role === "manufacturer" && <ManufacturerView />}
-          {user.role === "distributor" && <DistributorView />}
-          {user.role === "retailer" && <RetailerView />}
-        </div>
+    <div className="dashboard-container">
+      <Sidebar role={user.role}/>
+      <div className="dashboard-content">
+        <Navbar username={user.name} role={user.role}/>
+        {renderDashboard()}
       </div>
     </div>
   );

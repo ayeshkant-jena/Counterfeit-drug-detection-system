@@ -1,0 +1,22 @@
+.dashboard-container {
+  display: flex;
+}
+
+.dashboard-content {
+  /* margin-left: 220px; Same as sidebar width */
+  padding: 30px;
+  width: calc(100% - 220px);
+  background-color: #f4f6fa;
+  min-height: 100vh;
+  overflow-y: auto;
+}
+
+.dashboard-content h1 {
+  font-size: 28px;
+  margin-bottom: 20px;
+}
+
+.dashboard-content p {
+  font-size: 16px;
+  line-height: 1.6;
+}

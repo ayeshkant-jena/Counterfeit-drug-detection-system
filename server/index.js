@@ -76,4 +76,8 @@ mongoose.connect('mongodb://localhost:27017/medchain');
 
 app.use('/api/auth', require('./routes/auth'));
 
+const batchRoutes = require('./routes/batchRoutes');
+app.use('/api/batches', batchRoutes);
+
+
 app.listen(5000, () => console.log('Server running on port 5000'));

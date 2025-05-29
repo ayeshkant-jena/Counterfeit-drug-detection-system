@@ -11,7 +11,7 @@
 .line{
     display: flex;
     height: 1px;
-    margin: 10px 0px 20px 0px;
+    margin: 10px 0px 0px 0px;
     width: 100%;
     background-color: rgba(128, 128, 128, 0.2);
 }
