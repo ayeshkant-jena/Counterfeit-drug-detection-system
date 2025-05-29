@@ -1,9 +1,9 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 // import Login from './Login';
-import Dashboard from './pages/Dashboard';
-import Login from '../src/pages/Login'
-import LandingPage from './pages/landingPage';
-import Navbar from './components/Navbar/navbar';
+import DashboardPage from './pages/DashboardPage';
+import AuthPage from '../src/pages/AuthPage'
+import LandingPage from './pages/LandingPage';
+import Navbar from './components/Navbar/Navbar';
 import VerifyMedicine from './pages/VerifyMedicine'
 import ReportMedicine from './pages/ReportMedicine';
 import MedicineSupplyDetail from './pages/MedicineSupplyDetail';
@@ -14,8 +14,8 @@ function App() {
       <Navbar/>
       <Routes>
         <Route path="/" element={<LandingPage />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/auth" element={<AuthPage />} />
+        <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/verifymedicine" element={<VerifyMedicine />} />
         <Route path="/reportmedicine" element={<ReportMedicine />} />
         <Route path="/medicinesupplydetail" element={<MedicineSupplyDetail />} />

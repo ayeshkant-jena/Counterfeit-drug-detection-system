@@ -22,14 +22,15 @@ const Navbar = () => {
                 </Link>
                 <div>
                     {isLoggedIn ? (
-                        <button onClick={handleLogout()} className='loginbtn'>
+                        <button onClick={handleLogout} className='loginbtn'>
                             Logout
                         </button>
                     ) : (
-                        <button onClick={() => navigate('/login')} className='loginbtn'>
+                        <button onClick={() => navigate('/auth')} className='loginbtn'>
                             Login
                         </button>
                     )}
+
                 </div>
             </nav>
             <span className='line'></span>
