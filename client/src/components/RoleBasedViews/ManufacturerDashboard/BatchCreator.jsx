@@ -21,11 +21,21 @@ const BatchCreator = ({ userId }) => {
     e.preventDefault();
 
     try {
-      // 1. Create batch on server
-      const batchRes = await axios.post('http://localhost:5000/api/batches/create', {
-        ...form,
+      const payload = {
+        medicineName: form.medicineName,
+        bigBoxCount: Number(form.bigBoxCount),
+        smallBoxPerBigBox: Number(form.smallBoxPerBigBox),
+        stripsPerSmallBox: Number(form.stripsPerSmallBox),
         createdBy: userId
-      });
+      };
+
+const batchRes = await axios.post('http://localhost:5000/api/batches/create', payload);
+
+      // 1. Create batch on server
+      // const batchRes = await axios.post('http://localhost:5000/api/batches/create', payload,  {
+      //   ...form,
+      //   createdBy: userId
+      // });
 
       const batchId = batchRes.data.batchId;
       const qrData = {

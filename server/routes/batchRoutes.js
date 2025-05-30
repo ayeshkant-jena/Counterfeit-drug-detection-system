@@ -22,7 +22,8 @@ router.post('/create', async (req, res) => {
     await newBatch.save();
     res.status(201).json({ message: 'Batch created', batchId });
   } catch (err) {
-    res.status(500).json({ error: 'Batch creation failed' });
+      console.error('Batch creation error:', err);
+      res.status(500).json({ error: 'Batch creation failed', details: err.message });
   }
 });
 

@@ -6,7 +6,7 @@ const batchSchema = new mongoose.Schema({
   bigBoxCount: Number,
   smallBoxPerBigBox: Number,
   stripsPerSmallBox: Number,
-  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  // createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   createdAt: { type: Date, default: Date.now }
 });
 
