@@ -1,65 +1,47 @@
 .manufacturer-dashboard {
   padding: 20px;
-  color: #1a1a1a;
-  font-family: 'Segoe UI', sans-serif;
-}
-
-.manufacturer-dashboard h1 {
-  font-size: 28px;
-  margin-bottom: 30px;
-  color: #333;
+  font-family: Arial, sans-serif;
 }
 
 .stats-cards {
   display: flex;
   gap: 20px;
-  flex-wrap: wrap;
-  margin-bottom: 30px;
+  margin: 20px 0;
 }
 
 .card {
-  background-color: #ffffff;
-  padding: 20px;
+  background-color: #f7f7f7;
+  padding: 15px;
   border: 1px solid #ddd;
-  border-radius: 10px;
+  border-radius: 8px;
   flex: 1;
-  min-width: 200px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
   text-align: center;
-}
-
-.card h2 {
-  font-size: 18px;
-  margin-bottom: 10px;
-  color: #555;
-}
-
-.card p {
-  font-size: 24px;
-  font-weight: bold;
-  color: #1d72b8;
 }
 
 .actions {
   display: flex;
-  gap: 15px;
-  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 20px;
 }
 
 .actions button {
-  background-color: #1d72b8;
+  padding: 10px 15px;
+  background-color: #2b70e0;
   color: #fff;
-  padding: 10px 18px;
-  font-size: 16px;
   border: none;
-  border-radius: 8px;
+  border-radius: 5px;
   cursor: pointer;
-  transition: background-color 0.3s ease;
 }
 
 .actions button:hover {
-  background-color: #155d91;
+  background-color: #1a58a0;
 }
+
+.batch-creator-section,
+.batch-list-section {
+  margin-top: 30px;
+}
+
 
 .batch-form {
   width: 400px;
@@ -97,4 +79,33 @@
 
 .batch-form button:hover {
   background-color: #1a58a0;
+}
+
+/* /client/src/components/ManufacturerDashboard/BatchList.css */
+
+.batch-list {
+  margin: 20px;
+  font-family: Arial, sans-serif;
+}
+
+.batch-list h2 {
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.batch-list table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.batch-list th,
+.batch-list td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: center;
+}
+
+.batch-list th {
+  background-color: #f2f2f2;
+  font-weight: bold;
 }

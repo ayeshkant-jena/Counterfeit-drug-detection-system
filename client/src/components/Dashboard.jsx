@@ -4,8 +4,8 @@ import Sidebar from "./Sidebar";
 import Navbar from "./Navbar";
 import './Dashboard.css';
 import ManufacturerView from "./RoleBasedViews/ManufacturerDashboard/ManufacturerView";
-import DistributorView from "./RoleBasedViews/DistributorView";
-import RetailerView from "./RoleBasedViews/RetailerView";
+import DistributorView from "./RoleBasedViews/DistributorDashboard/DistributorView";
+import RetailerView from "./RoleBasedViews/RetailerDashboard/RetailerView";
 
   const Dashboard = () => {
   const [user, setUser] = useState(null);

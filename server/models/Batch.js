@@ -1,3 +1,4 @@
+//Batch.js
 const mongoose = require('mongoose');
 
 const batchSchema = new mongoose.Schema({
@@ -6,8 +7,12 @@ const batchSchema = new mongoose.Schema({
   bigBoxCount: Number,
   smallBoxPerBigBox: Number,
   stripsPerSmallBox: Number,
-  // createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-  createdAt: { type: Date, default: Date.now }
+  createdBy: { type: String, required: true },
+  createdAt: { type: Date, default: Date.now },
+  qrCodePath: { type: String },
+  markedSent: { type: Boolean, default: false },
+  blockchainHash: { type: String }
 });
 
 module.exports = mongoose.model('Batch', batchSchema);
+

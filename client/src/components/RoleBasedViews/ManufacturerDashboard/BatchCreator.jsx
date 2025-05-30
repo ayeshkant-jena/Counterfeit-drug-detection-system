@@ -17,61 +17,57 @@ const BatchCreator = ({ userId }) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+const handleSubmit = async (e) => {
+  e.preventDefault();
 
+  try {
+    // Step 1: Create Batch
+    const batchRes = await axios.post('http://localhost:5000/api/batches/create', {
+      ...form,
+      createdBy: userId
+    });
+
+    const batchId = batchRes.data.batchId;
+
+    // Step 2: Generate QR Code
+    const qrData = {
+      batchId,
+      medicineName: form.medicineName,
+      bigBoxCount: form.bigBoxCount,
+      smallBoxPerBigBox: form.smallBoxPerBigBox,
+      stripsPerSmallBox: form.stripsPerSmallBox
+    };
+    const qrString = JSON.stringify(qrData);
+    const qrImageUrl = await QRCode.toDataURL(qrString);
+    setQrImage(qrImageUrl);
+
+    // Step 3: Save QR to backend
     try {
-      const payload = {
-        medicineName: form.medicineName,
-        bigBoxCount: Number(form.bigBoxCount),
-        smallBoxPerBigBox: Number(form.smallBoxPerBigBox),
-        stripsPerSmallBox: Number(form.stripsPerSmallBox),
-        createdBy: userId
-      };
-
-const batchRes = await axios.post('http://localhost:5000/api/batches/create', payload);
-
-      // 1. Create batch on server
-      // const batchRes = await axios.post('http://localhost:5000/api/batches/create', payload,  {
-      //   ...form,
-      //   createdBy: userId
-      // });
-
-      const batchId = batchRes.data.batchId;
-      const qrData = {
-        batchId,
-        medicineName: form.medicineName,
-        bigBoxCount: form.bigBoxCount,
-        smallBoxPerBigBox: form.smallBoxPerBigBox,
-        stripsPerSmallBox: form.stripsPerSmallBox
-      };
-
-      // 2. Generate QR Code
-      const qrString = JSON.stringify(qrData);
-      const qrImageUrl = await QRCode.toDataURL(qrString);
-      setQrImage(qrImageUrl);
-
-      // 3. Save QR code to backend
-      await axios.post('http://localhost:5000/api/save-qr', {
+      await axios.post('http://localhost:5000/api/qrcodes', {
         image: qrImageUrl,
         batchId
       });
-
-      alert(`Batch created successfully! QR saved. Batch ID: ${batchId}`);
-
-      // Reset form
-      setForm({
-        medicineName: '',
-        bigBoxCount: '',
-        smallBoxPerBigBox: '',
-        stripsPerSmallBox: ''
-      });
-
-    } catch (err) {
-      console.error(err);
-      alert('Error creating batch or saving QR code');
+    } catch (qrErr) {
+      console.error('QR Save Failed:', qrErr);
+      alert('Batch created, but QR code save failed.');
+      return;
     }
-  };
+
+    alert(`✅ Batch created and QR saved! Batch ID: ${batchId}`);
+
+    // Reset form
+    setForm({
+      medicineName: '',
+      bigBoxCount: '',
+      smallBoxPerBigBox: '',
+      stripsPerSmallBox: ''
+    });
+  } catch (err) {
+    console.error('Batch Creation Failed:', err);
+    alert('❌ Error creating batch.');
+  }
+};
+
 
   return (
     <div className="batch-form">
