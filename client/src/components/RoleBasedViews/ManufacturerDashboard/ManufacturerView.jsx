@@ -1,12 +1,44 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import './ManufacturerView.css';
 import BatchCreator from './BatchCreator';
+import { ethers } from 'ethers';
+import { getContract } from '../../../blockchain/contract-config';
 
 const ManufacturerView = () => {
   const user = JSON.parse(localStorage.getItem("user"));
   const name = user?.name || "Manufacturer";
 
   const [showBatchCreator, setShowBatchCreator] = useState(false);
+  const [contract, setContract] = useState(null);
+  const [account, setAccount] = useState(null);
+
+  const connectingRef = useRef(false); // Prevent multiple connect calls
+
+  const connectWalletAndLoadContract = async () => {
+    if (!window.ethereum || connectingRef.current) return;
+
+    connectingRef.current = true;
+    try {
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const accounts = await provider.send("eth_requestAccounts", []);
+      const signer = await provider.getSigner();
+      const contractInstance = getContract(signer);
+
+      setAccount(accounts[0]);
+      setContract(contractInstance);
+
+      console.log("Connected wallet:", accounts[0]);
+      console.log("Contract loaded:", contractInstance.target);
+    } catch (err) {
+      console.error("Wallet connection failed:", err);
+    } finally {
+      connectingRef.current = false;
+    }
+  };
+
+  useEffect(() => {
+    connectWalletAndLoadContract();
+  }, []);
 
   return (
     <div className="manufacturer-dashboard">
@@ -35,9 +67,9 @@ const ManufacturerView = () => {
         <button>Scan QR Code</button>
       </div>
 
-      {showBatchCreator && (
+      {showBatchCreator && contract && (
         <div className="batch-creator-section">
-          <BatchCreator userId={user?._id} />
+          <BatchCreator contract={contract} userId={account} />
         </div>
       )}
     </div>

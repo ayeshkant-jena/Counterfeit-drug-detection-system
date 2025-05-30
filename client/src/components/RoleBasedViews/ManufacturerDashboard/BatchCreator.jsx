@@ -1,91 +1,83 @@
-import React, { useState, useRef, useEffect } from 'react';
-import QRCode from 'qrcode.react';
+import React, { useState } from 'react';
+import axios from 'axios';
+import QRCode from 'qrcode';
+import './ManufacturerView.css';
 
 const BatchCreator = ({ userId }) => {
-  const [batchData, setBatchData] = useState({
-    batchId: '',
-    productName: '',
-    bigBoxes: 0,
-    boxesPerBigBox: 0,
-    stripsPerBox: 0,
+  const [form, setForm] = useState({
+    medicineName: '',
+    bigBoxCount: '',
+    smallBoxPerBigBox: '',
+    stripsPerSmallBox: ''
   });
 
-  const [generatedQR, setGeneratedQR] = useState(null);
-  const qrRef = useRef();
+  const [qrImage, setQrImage] = useState(null);
 
   const handleChange = (e) => {
-    setBatchData({ ...batchData, [e.target.name]: e.target.value });
+    setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const uploadQRToServer = async (qrBase64, batchId) => {
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
     try {
-      const response = await fetch('/api/save-qr', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image: qrBase64, batchId }),
+      // 1. Create batch on server
+      const batchRes = await axios.post('http://localhost:5000/api/batches/create', {
+        ...form,
+        createdBy: userId
       });
-      if (response.ok) {
-        console.log('QR code saved successfully!');
-      } else {
-        console.error('Failed to save QR code');
-      }
+
+      const batchId = batchRes.data.batchId;
+      const qrData = {
+        batchId,
+        medicineName: form.medicineName,
+        bigBoxCount: form.bigBoxCount,
+        smallBoxPerBigBox: form.smallBoxPerBigBox,
+        stripsPerSmallBox: form.stripsPerSmallBox
+      };
+
+      // 2. Generate QR Code
+      const qrString = JSON.stringify(qrData);
+      const qrImageUrl = await QRCode.toDataURL(qrString);
+      setQrImage(qrImageUrl);
+
+      // 3. Save QR code to backend
+      await axios.post('http://localhost:5000/api/save-qr', {
+        image: qrImageUrl,
+        batchId
+      });
+
+      alert(`Batch created successfully! QR saved. Batch ID: ${batchId}`);
+
+      // Reset form
+      setForm({
+        medicineName: '',
+        bigBoxCount: '',
+        smallBoxPerBigBox: '',
+        stripsPerSmallBox: ''
+      });
+
     } catch (err) {
-      console.error('Error uploading QR:', err);
+      console.error(err);
+      alert('Error creating batch or saving QR code');
     }
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-
-    const batchId = `BATCH-${Date.now()}`;
-    const fullBatch = {
-      ...batchData,
-      batchId,
-      manufacturerId: userId,
-      timestamp: new Date().toISOString(),
-    };
-
-    // Generate QR data string
-    const qrDataString = JSON.stringify(fullBatch);
-    setGeneratedQR(qrDataString);
-
-    setTimeout(() => {
-      // Convert QRCode canvas to image base64
-      const canvas = qrRef.current.querySelector('canvas');
-      if (canvas) {
-        const qrBase64 = canvas.toDataURL('image/png');
-        uploadQRToServer(qrBase64, batchId);
-      }
-    }, 100); // small delay to ensure QRCode rendered
-
-    // Reset form
-    setBatchData({
-      batchId: '',
-      productName: '',
-      bigBoxes: 0,
-      boxesPerBigBox: 0,
-      stripsPerBox: 0,
-    });
-  };
-
   return (
-    <div>
+    <div className="batch-form">
+      <h2>Create New Medicine Batch</h2>
       <form onSubmit={handleSubmit}>
-        {/* Inputs for productName, bigBoxes, boxesPerBigBox, stripsPerBox */}
-        {/* ... */}
+        <input type="text" name="medicineName" placeholder="Medicine Name" value={form.medicineName} onChange={handleChange} required />
+        <input type="number" name="bigBoxCount" placeholder="Number of Big Boxes" value={form.bigBoxCount} onChange={handleChange} required />
+        <input type="number" name="smallBoxPerBigBox" placeholder="Small Boxes per Big Box" value={form.smallBoxPerBigBox} onChange={handleChange} required />
+        <input type="number" name="stripsPerSmallBox" placeholder="Strips per Small Box" value={form.stripsPerSmallBox} onChange={handleChange} required />
         <button type="submit">Create Batch</button>
       </form>
 
-      {/* Hidden QR code for image generation */}
-      <div style={{ position: 'absolute', left: '-9999px' }} ref={qrRef}>
-        {generatedQR && <QRCode value={generatedQR} size={256} />}
-      </div>
-
-      {/* Visible QR code */}
-      {generatedQR && (
-        <div>
+      {qrImage && (
+        <div className="qr-preview">
           <h3>QR Code:</h3>
-          <QRCode value={generatedQR} size={256} />
+          <img src={qrImage} alt="QR Code" />
         </div>
       )}
     </div>

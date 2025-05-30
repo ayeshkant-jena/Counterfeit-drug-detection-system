@@ -79,5 +79,7 @@ app.use('/api/auth', require('./routes/auth'));
 const batchRoutes = require('./routes/batchRoutes');
 app.use('/api/batches', batchRoutes);
 
+const qrCodeRoute = require('./routes/qrCode');
+app.use('/api', qrCodeRoute);
 
 app.listen(5000, () => console.log('Server running on port 5000'));
