@@ -1,3 +1,4 @@
+//AuthPage.jsx
 import { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom'; // <-- Step 1
@@ -35,48 +36,76 @@ function AuthPage() {
 
   const handleChange = e => setForm({ ...form, [e.target.name]: e.target.value });
 
-  const connectWallet = async () => {
-    if (window.ethereum) {
-      try {
-        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-        const walletAddress = accounts[0];
-        setForm(prev => ({ ...prev, walletAddress }));
-        setWalletConnected(true);
-        alert(`Wallet connected: ${walletAddress}`);
-      } catch (err) {
-        console.error("Wallet connection failed", err);
-        alert("Wallet connection was rejected");
-      }
+const connectWallet = async () => {
+  if (!window.ethereum) {
+    return alert("MetaMask is not installed");
+  }
+
+  try {
+    // Force MetaMask to open the wallet selection popup
+    await window.ethereum.request({
+      method: 'wallet_requestPermissions',
+      params: [{ eth_accounts: {} }]
+    });
+
+    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+
+    if (!accounts.length) {
+      return alert("No wallet connected");
+    }
+
+    const walletAddress = accounts[0].toLowerCase();
+
+    // THEN check with backend
+    const checkRes = await axios.get(`http://localhost:5000/api/auth/check-wallet?wallet=${walletAddress}`);
+
+    if (checkRes.data.exists) {
+      alert("Wallet address already registered. Please switch to a new wallet in MetaMask.");
+      setWalletConnected(false);
+      setForm(prev => ({ ...prev, walletAddress: '' }));
+      return;
+    }
+
+    setForm(prev => ({ ...prev, walletAddress }));
+    setWalletConnected(true);
+    alert(`Wallet connected: ${walletAddress}`);
+  } catch (err) {
+    console.error("Wallet connection error", err);
+    alert("Wallet connection failed or was rejected");
+  }
+};
+
+const handleSubmit = async e => {
+  e.preventDefault();
+
+  try {
+    if (isLogin) {
+      const res = await axios.post('http://localhost:5000/api/auth/login', {
+        email: form.email,
+        password: form.password
+      });
+      alert(`Logged in as ${res.data.role}`);
+      localStorage.setItem('token', res.data.token);
+      localStorage.setItem('user', JSON.stringify(res.data));
+      navigate("/dashboard");
     } else {
-      alert("MetaMask is not installed");
-    }
-  };
-
-  const handleSubmit = async e => {
-    e.preventDefault();
-
-    try {
-      if (isLogin) {
-        const res = await axios.post('http://localhost:5000/api/auth/login', {
-          email: form.email,
-          password: form.password
-        });
-        alert(`Logged in as ${res.data.role}`);
-        localStorage.setItem('token', res.data.token);
-        localStorage.setItem('user', JSON.stringify(res.data)); // optional: store user
-        navigate("/dashboard"); // <-- Step 3: redirect to dashboard
-      } else {
-        if (!walletConnected) {
-          return alert("Please connect your MetaMask wallet first.");
-        }
-        await axios.post('http://localhost:5000/api/auth/register', form);
-        alert('Registered successfully. Await admin approval.');
-        setIsLogin(true);
+      if (!walletConnected) {
+        return alert("Please connect your MetaMask wallet first.");
       }
-    } catch (err) {
-      alert(err.response?.data?.error || 'Something went wrong');
+
+      const res = await axios.post('http://localhost:5000/api/auth/register', form);
+      alert('Registered successfully. Await admin approval.');
+      setIsLogin(true);
     }
-  };
+  } catch (err) {
+    if (err.response?.data?.error) {
+      alert(err.response.data.error);
+    } else {
+      alert('Something went wrong');
+    }
+  }
+};
+
 
   return (
     <div style={{ maxWidth: 400, margin: 'auto', padding: 20 }}>
@@ -121,3 +150,4 @@ function AuthPage() {
 }
 
 export default AuthPage;
+

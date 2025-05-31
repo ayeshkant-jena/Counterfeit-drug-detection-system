@@ -10,8 +10,11 @@ const BatchQRScanner = () => {
   const qrRegionId = "qr-reader";
 
   useEffect(() => {
+    let html5QrCode;
+
     if (mode === 'camera') {
-      const html5QrCode = new Html5Qrcode(qrRegionId);
+      html5QrCode = new Html5Qrcode(qrRegionId);
+
       Html5Qrcode.getCameras().then(devices => {
         if (devices && devices.length) {
           const cameraId = devices[0].id;
@@ -37,9 +40,11 @@ const BatchQRScanner = () => {
     }
 
     return () => {
-      if (mode === 'camera') Html5Qrcode.getCameras().then(() => {
-        Html5Qrcode.clearCameras();
-      });
+      if (html5QrCode) {
+        html5QrCode.stop().then(() => {
+          html5QrCode.clear();
+        });
+      }
     };
   }, [mode]);
 
@@ -73,10 +78,10 @@ const BatchQRScanner = () => {
 
   const handleSubmit = async (qrData) => {
     try {
-      const res = await fetch("http://localhost:5000/api/batches/scan-qr", {
+      const res = await fetch("http://localhost:5000/api/scan-qr", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ batchId: qrData })
+        body: JSON.stringify({ batchId: qrData }) // Assuming QR contains only the batchId string
       });
 
       const data = await res.json();

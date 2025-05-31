@@ -17,10 +17,11 @@ const batchRoutes = require('./routes/batchRoutes');
 app.use('/api/batches', batchRoutes);
 
 // QR routes
-const qrRoutes = require('./routes/qrcode'); // ✅ ADD THIS
-app.use('/api', qrRoutes);                   // ✅ Mounts /api/qrcodes
+const qrRoutes = require('./routes/qrCode');
+app.use('/api', qrRoutes); // Mounts /api/qrcodes and /api/scan-qr
 
 // Serve QR code images
-app.use('/qrcodes', express.static(path.join(__dirname, 'public', 'qrcodes'))); // ✅ serves /qrcodes/:filename
+app.use('/qrcodes', express.static(path.join(__dirname, 'public', 'qrcodes')));
+app.use('/scan-qr', express.static(path.join(__dirname, 'public', 'scn-qr')));
 
 app.listen(5000, () => console.log('Server running on port 5000'));
