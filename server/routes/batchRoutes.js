@@ -1,4 +1,4 @@
-// /backend/routes/batchRoutes.js
+// ...existing code...
 const express = require('express');
 const { v4: uuidv4 } = require('uuid');
 const Batch = require('../models/Batch');
@@ -27,6 +27,29 @@ router.post('/create', async (req, res) => {
   }
 });
 
+// GET total batches count
+router.get('/count', async (req, res) => {
+  try {
+    const count = await Batch.countDocuments({});
+    res.json({ count });
+  } catch (err) {
+    console.error('Error getting total batch count:', err);
+    res.status(500).json({ error: 'Failed to get batch count' });
+  }
+});
+
+// GET batches count for a specific user
+router.get('/count/by-user/:userId', async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    const count = await Batch.countDocuments({ createdBy: userId });
+    res.json({ count });
+  } catch (err) {
+    console.error('Error getting user batch count:', err);
+    res.status(500).json({ error: 'Failed to get user batch count' });
+  }
+});
+
 // GET batches by user id
 router.get('/by-user/:userId', async (req, res) => {
   try {
@@ -39,4 +62,3 @@ router.get('/by-user/:userId', async (req, res) => {
 });
 
 module.exports = router;
-

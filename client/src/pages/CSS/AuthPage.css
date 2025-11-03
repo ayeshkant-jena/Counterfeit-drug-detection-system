@@ -1,0 +1,16 @@
+form{
+    /* display: flex; */
+    /* background-color: red; */
+    width: auto;
+}
+input{
+    font-size: 18px;
+    padding: 5px 10px;
+    width: auto;
+}
+.container{
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    max-width: 400px;
+}

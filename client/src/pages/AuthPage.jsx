@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom'; // <-- Step 1
+import "./CSS/AuthPage.css"
 
 function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
@@ -108,7 +109,7 @@ const handleSubmit = async e => {
 
 
   return (
-    <div style={{ maxWidth: 400, margin: 'auto', padding: 20 }}>
+    <div className='container' style={{ margin: 'auto', padding: 20 }}>
       <h2>{isLogin ? 'Login' : 'Register'}</h2>
       <form onSubmit={handleSubmit}>
         {!isLogin && (

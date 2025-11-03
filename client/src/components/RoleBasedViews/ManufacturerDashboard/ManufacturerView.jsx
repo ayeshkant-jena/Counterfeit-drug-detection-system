@@ -1,4 +1,3 @@
-// /client/src/components/ManufacturerDashboard/ManufacturerView.jsx
 import { useState, useEffect } from 'react';
 import './ManufacturerView.css';
 import BatchCreator from './BatchCreator';
@@ -15,6 +14,7 @@ const ManufacturerView = () => {
   const [showBatchQRScanner, setShowBatchQRScanner] = useState(false);
   const [contract, setContract] = useState(null);
   const [account, setAccount] = useState(null);
+  const [batchesCount, setBatchesCount] = useState(0);
 
   const connectWalletAndLoadContract = async () => {
     if (window.ethereum) {
@@ -35,9 +35,38 @@ const ManufacturerView = () => {
     }
   };
 
+  const fetchBatchesCount = async () => {
+    try {
+      // safe runtime check for process.env (works with CRA, Vite, etc.)
+      const base =
+        (typeof process !== 'undefined' && process.env && process.env.REACT_APP_API_BASE_URL)
+          ? process.env.REACT_APP_API_BASE_URL
+          : (window.REACT_APP_API_BASE_URL || 'http://localhost:5000');
+
+      const res = await fetch(`${base}/api/batches/count`);
+      if (!res.ok) {
+        console.error('Batches count fetch failed:', res.status, await res.text());
+        throw new Error('Network response was not ok');
+      }
+      const data = await res.json();
+      setBatchesCount(Number(data.count) || 0);
+    } catch (err) {
+      console.error('Failed to fetch batches count', err);
+    }
+  };
+
   useEffect(() => {
     connectWalletAndLoadContract();
+    fetchBatchesCount();
+    // cleanup on unmount handled in other components if any
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // refresh count when UI that can create/delete batches toggles (optional)
+  useEffect(() => {
+    fetchBatchesCount();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showBatchCreator, showBatchList]);
 
   return (
     <div className="manufacturer-dashboard">
@@ -47,7 +76,7 @@ const ManufacturerView = () => {
       <div className="stats-cards">
         <div className="card">
           <h2>Batches Created</h2>
-          <p>12</p>
+          <p>{batchesCount}</p>
         </div>
         <div className="card">
           <h2>Shipments Sent</h2>
@@ -87,7 +116,7 @@ const ManufacturerView = () => {
 
       {showBatchQRScanner && (
         <div>
-          <BatchQRScanner/>
+          <BatchQRScanner />
         </div>
       )}
     </div>
