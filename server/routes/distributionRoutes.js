@@ -47,27 +47,43 @@ router.post('/create', requireAuth, async (req, res) => {
     const senderRole = req.user?.role;
 
     try {
-        // Verify batch exists and has enough boxes
+        // Verify batch exists
         const batch = await Batch.findOne({ batchId });
         if (!batch) {
             return res.status(404).json({ error: 'Batch not found' });
         }
 
-        const totalBoxes = batch.bigCartonCount * batch.bigBoxPerCarton;
+        let availableForSender;
+        
+        // For manufacturers: check against total boxes from batch
+        if (req.user.role === 'Manufacturer') {
+            // Verify manufacturer owns this batch
+            if (batch.createdBy.toString() !== req.user.id.toString()) {
+                return res.status(403).json({ error: 'Not authorized to distribute this batch' });
+            }
 
-        // compute how many boxes sender currently holds for this batch
-        // sender must have previously received boxes (or be the Manufacturer who can send from master stock)
-        const receivedBySender = await Distribution.aggregate([
-            { $match: { batchId, receiverId: senderId } },
-            { $group: { _id: null, sum: { $sum: '$bigBoxCount' } } }
-        ]);
-        const sentBySender = await Distribution.aggregate([
-            { $match: { batchId, senderId: senderId } },
-            { $group: { _id: null, sum: { $sum: '$bigBoxCount' } } }
-        ]);
-        const received = (receivedBySender[0] && receivedBySender[0].sum) || 0;
-        const sent = (sentBySender[0] && sentBySender[0].sum) || 0;
-        const availableForSender = received - sent;
+            const totalBoxes = batch.bigCartonCount * batch.bigBoxPerCarton;
+            const sentByManufacturer = await Distribution.aggregate([
+                { $match: { batchId, senderId: req.user.id } },
+                { $group: { _id: null, sum: { $sum: '$bigBoxCount' } } }
+            ]);
+            const sent = (sentByManufacturer[0] && sentByManufacturer[0].sum) || 0;
+            availableForSender = totalBoxes - sent;
+        } 
+        // For wholesalers/retailers: check against received - sent
+        else {
+            const receivedBySender = await Distribution.aggregate([
+                { $match: { batchId, receiverId: senderId } },
+                { $group: { _id: null, sum: { $sum: '$bigBoxCount' } } }
+            ]);
+            const sentBySender = await Distribution.aggregate([
+                { $match: { batchId, senderId: senderId } },
+                { $group: { _id: null, sum: { $sum: '$bigBoxCount' } } }
+            ]);
+            const received = (receivedBySender[0] && receivedBySender[0].sum) || 0;
+            const sent = (sentBySender[0] && sentBySender[0].sum) || 0;
+            availableForSender = received - sent;
+        }
 
         if (bigBoxCount > availableForSender) {
             return res.status(400).json({ error: 'Insufficient boxes available for sender', available: availableForSender });

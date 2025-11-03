@@ -29,10 +29,21 @@ const BatchDistributor = ({ userId }) => {
                 const distributorsRes = await axios.get('http://localhost:5000/api/distributions/distributors');
                 console.log('Distributors fetched:', distributorsRes.data);
                 setDistributors(distributorsRes.data);
+
+                // Log useful debug info
+                const user = JSON.parse(localStorage.getItem('user'));
+                console.log('Current user:', { 
+                    id: user?.id,
+                    role: user?.role,
+                    walletAddress: user?.walletAddress
+                });
             } catch (err) {
                 console.error('Error fetching data:', err);
                 if (err.response) {
                     console.error('Response error:', err.response.data);
+                    alert(`Error: ${err.response.data.error || 'Failed to fetch data'}`);
+                } else {
+                    alert('Network error - check console');
                 }
             }
         };
@@ -77,17 +88,24 @@ const BatchDistributor = ({ userId }) => {
             const selectedBatchData = batches.find(b => b.batchId === selectedBatch);
             const selectedDistributor = distributors.find(d => d._id === form.distributorId);
 
+            const user = JSON.parse(localStorage.getItem('user'));
+            if (!user?.token) {
+                throw new Error('Please login first');
+            }
+
             // Create distribution
-            const token = localStorage.getItem('token');
             const distributionRes = await axios.post('http://localhost:5000/api/distributions/create', {
                 batchId: selectedBatch,
                 medicineName: selectedBatchData.medicineName,
-                manufacturerId: userId,
                 receiverId: form.distributorId,
                 receiverRole: 'Wholesaler',
                 bigBoxCount: parseInt(form.bigBoxCount),
                 expiryDate: selectedBatchData.expiryDate
-            }, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+            }, { 
+                headers: { 
+                    'Authorization': `Bearer ${user.token}` 
+                } 
+            });
 
             // Generate QR Code for this distribution
             const qrData = {
