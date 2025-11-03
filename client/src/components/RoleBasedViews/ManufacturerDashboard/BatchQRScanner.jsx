@@ -78,20 +78,43 @@ const BatchQRScanner = () => {
 
   const handleSubmit = async (qrData) => {
     try {
+      // Parse the QR data
+      let parsedData;
+      try {
+        parsedData = JSON.parse(qrData);
+      } catch (err) {
+        setStatus("❌ Invalid QR code format");
+        setResult("");
+        return;
+      }
+
+      // Send full QR payload to scan endpoint so server can record first-scan and update supplyChainHistory
+      const headers = { "Content-Type": "application/json" };
+      const token = localStorage.getItem('token');
+      if (token) headers.Authorization = `Bearer ${token}`;
       const res = await fetch("http://localhost:5000/api/scan-qr", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ batchId: qrData }) // Assuming QR contains only the batchId string
+        headers,
+        body: JSON.stringify({ qr: parsedData })
       });
 
       const data = await res.json();
       if (res.ok) {
-        setStatus(`✅ ${data.message} - Hash: ${data.hash}`);
+        // If server returned authenticity info use it, else generic success
+        if (typeof data.authentic !== 'undefined') {
+          setResult(JSON.stringify(data.batch || {}, null, 2));
+          setStatus(data.authentic ? `✅ Authentic: ${data.message}` : `❌ ${data.message}`);
+        } else {
+          setResult(JSON.stringify(data, null, 2));
+          setStatus(`✅ ${data.message}`);
+        }
       } else {
-        setStatus(`❌ ${data.message}`);
+        setResult("");
+        setStatus(`❌ ${data.message || 'Not found'}`);
       }
     } catch (err) {
-      setStatus("⚠️ Server error.");
+      setStatus("⚠️ Server error");
+      setResult("");
       console.error(err);
     }
   };

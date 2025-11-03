@@ -2,18 +2,33 @@
 const express = require('express');
 const { v4: uuidv4 } = require('uuid');
 const Batch = require('../models/Batch');
+const User = require('../models/User');
 const router = express.Router();
 
 // Create a new batch
 router.post('/create', async (req, res) => {
-  const { medicineName, bigBoxCount, smallBoxPerBigBox, stripsPerSmallBox, createdBy } = req.body;
+  let { 
+    medicineName, 
+    expiryDate,
+    bigCartonCount,
+    bigBoxPerCarton,
+    smallBoxPerBigBox,
+    stripsPerSmallBox,
+    createdBy 
+  } = req.body;
   const batchId = uuidv4();
 
   try {
+    // prefer authenticated user id if available (req.user set by auth middleware)
+    if (req.user && req.user.id) {
+      createdBy = req.user.id;
+    }
     const newBatch = new Batch({
       batchId,
       medicineName,
-      bigBoxCount,
+      expiryDate,
+      bigCartonCount,
+      bigBoxPerCarton,
       smallBoxPerBigBox,
       stripsPerSmallBox,
       createdBy
@@ -53,11 +68,57 @@ router.get('/count/by-user/:userId', async (req, res) => {
 // GET batches by user id
 router.get('/by-user/:userId', async (req, res) => {
   try {
-    const batches = await Batch.find({ createdBy: req.params.userId });
+    const param = req.params.userId;
+    // if param looks like a wallet address, try resolving to a user id
+    let userIdResolved = null;
+    if (typeof param === 'string' && param.toLowerCase().startsWith('0x')) {
+      const user = await User.findOne({ walletAddress: param.toLowerCase() }).lean();
+      if (user) userIdResolved = user._id.toString();
+    }
+
+    const query = userIdResolved ? { $or: [{ createdBy: param }, { createdBy: userIdResolved }] } : { createdBy: param };
+    const batches = await Batch.find(query);
     res.json(batches);
   } catch (err) {
     console.error("Error fetching batches:", err);
     res.status(500).json({ error: 'Failed to fetch batches' });
+  }
+});
+
+// Verify batch exists
+router.post('/verify', async (req, res) => {
+  try {
+    const { batchId } = req.body;
+    const batch = await Batch.findOne({ batchId });
+    
+    if (!batch) {
+      return res.status(404).json({ 
+        status: 'not_found',
+        message: 'Batch not found' 
+      });
+    }
+
+    res.json({ 
+      status: 'found',
+      message: 'Batch found',
+      batch: {
+        batchId: batch.batchId,
+        medicineName: batch.medicineName,
+        expiryDate: batch.expiryDate,
+        bigCartonCount: batch.bigCartonCount,
+        bigBoxPerCarton: batch.bigBoxPerCarton,
+        smallBoxPerBigBox: batch.smallBoxPerBigBox,
+        stripsPerSmallBox: batch.stripsPerSmallBox,
+        createdAt: batch.createdAt,
+        blockchainHash: batch.blockchainHash
+      }
+    });
+  } catch (err) {
+    console.error("Error verifying batch:", err);
+    res.status(500).json({ 
+      status: 'error',
+      message: 'Failed to verify batch' 
+    });
   }
 });
 

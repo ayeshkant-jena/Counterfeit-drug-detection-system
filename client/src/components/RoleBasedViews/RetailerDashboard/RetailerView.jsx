@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import './RetailerView.css';
 import BatchList from './BatchList';
-// import BatchReceiver from './BatchReceiver'; // QR scanner to receive shipment
+import BatchReceiver from './BatchReceiver'; // QR scanner to receive shipment
 import { ethers } from 'ethers';
 import { getContract } from '../../../blockchain/contract-config';
 
@@ -62,8 +62,8 @@ const RetailerView = () => {
         </button>
       </div>
 
-      {showBatchList && <BatchList userId={account} />}
-      {showReceiver && contract && <BatchReceiver contract={contract} userId={account} />}
+  {showBatchList && <BatchList userId={user?.walletAddress || account} />}
+  {showReceiver && contract && <BatchReceiver contract={contract} userId={user?.walletAddress || account} />}
     </div>
   );
 };

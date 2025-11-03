@@ -3,35 +3,47 @@ import './ManufacturerView.css';
 import BatchCreator from './BatchCreator';
 import BatchList from './BatchList';
 import BatchQRScanner from './BatchQRScanner';
+import BatchDistributor from './BatchDistributor';
 import { ethers } from 'ethers';
 import { getContract } from '../../../blockchain/contract-config';
+import { useNavigate } from 'react-router-dom';
 
 const ManufacturerView = () => {
+  const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem("user"));
   const name = user?.name || "Manufacturer";
+  const walletAddress = user?.walletAddress?.toLowerCase();
+  
   const [showBatchCreator, setShowBatchCreator] = useState(false);
   const [showBatchList, setShowBatchList] = useState(false);
   const [showBatchQRScanner, setShowBatchQRScanner] = useState(false);
+  const [showBatchDistributor, setShowBatchDistributor] = useState(false);
   const [contract, setContract] = useState(null);
-  const [account, setAccount] = useState(null);
   const [batchesCount, setBatchesCount] = useState(0);
 
-  const connectWalletAndLoadContract = async () => {
-    if (window.ethereum) {
-      try {
-        const provider = new ethers.BrowserProvider(window.ethereum);
-        const accounts = await provider.send("eth_requestAccounts", []);
-        const signer = await provider.getSigner();
-        const contractInstance = getContract(signer);
+  // Verify we're properly logged in
+  useEffect(() => {
+    if (!user || !user.walletAddress || user.role !== 'Manufacturer') {
+      alert('Please log in as a Manufacturer');
+      navigate('/auth');
+      return;
+    }
+  }, [user, navigate]);
 
-        setAccount(accounts[0]);
-        setContract(contractInstance);
-        console.log("Connected wallet:", accounts[0]);
-      } catch (err) {
-        console.error("Wallet connection failed:", err);
-      }
-    } else {
-      alert("Please install MetaMask to use blockchain features.");
+  const loadContract = async () => {
+    if (!window.ethereum) {
+      console.log("MetaMask not found - blockchain features disabled");
+      return;
+    }
+
+    try {
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const contractInstance = getContract(signer);
+      setContract(contractInstance);
+      console.log("Contract loaded for wallet:", walletAddress);
+    } catch (err) {
+      console.error("Contract loading failed:", err);
     }
   };
 
@@ -56,22 +68,27 @@ const ManufacturerView = () => {
   };
 
   useEffect(() => {
-    connectWalletAndLoadContract();
-    fetchBatchesCount();
-    // cleanup on unmount handled in other components if any
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (walletAddress) {
+      loadContract();
+      fetchBatchesCount();
+    }
+  }, [walletAddress]);
 
-  // refresh count when UI that can create/delete batches toggles (optional)
+  // refresh count when UI that can create/delete batches toggles
   useEffect(() => {
-    fetchBatchesCount();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showBatchCreator, showBatchList]);
+    if (walletAddress) {
+      fetchBatchesCount();
+    }
+  }, [showBatchCreator, showBatchList, walletAddress]);
+
+  if (!walletAddress) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <div className="manufacturer-dashboard">
       <h1>Welcome, {name} 👋</h1>
-      <h3>Your Wallet: {account}</h3>
+      <h3>Your Wallet: {walletAddress}</h3>
 
       <div className="stats-cards">
         <div className="card">
@@ -100,23 +117,34 @@ const ManufacturerView = () => {
             {showBatchQRScanner ? 'Hide QR Scanner' : 'Show QR Scanner'}
           </button>
         </div>
+        <div style={{ display: 'inline-block' }}>
+          <button onClick={() => setShowBatchDistributor(!showBatchDistributor)}>
+            {showBatchDistributor ? 'Hide Batch Distribution' : 'Distribute Batch'}
+          </button>
+        </div>
       </div>
 
-      {showBatchCreator && contract && (
+      {showBatchCreator && (
         <div className="batch-creator-section">
-          <BatchCreator contract={contract} userId={account} />
+          <BatchCreator contract={contract} userId={walletAddress} />
         </div>
       )}
 
-      {showBatchList && account && (
+      {showBatchList && (
         <div className="batch-list-section">
-          <BatchList userId={account} />
+          <BatchList userId={walletAddress} />
         </div>
       )}
 
       {showBatchQRScanner && (
         <div>
           <BatchQRScanner />
+        </div>
+      )}
+
+      {showBatchDistributor && (
+        <div className="batch-distributor-section">
+          <BatchDistributor userId={walletAddress} />
         </div>
       )}
     </div>

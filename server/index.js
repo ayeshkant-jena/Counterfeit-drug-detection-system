@@ -16,6 +16,14 @@ app.use('/api/auth', require('./routes/auth'));
 const batchRoutes = require('./routes/batchRoutes');
 app.use('/api/batches', batchRoutes);
 
+// Distribution routes
+const distributionRoutes = require('./routes/distributionRoutes');
+app.use('/api/distributions', distributionRoutes);
+
+// Scan routes (audit)
+const scanRoutes = require('./routes/scanRoutes');
+app.use('/api/scans', scanRoutes);
+
 // QR routes
 const qrRoutes = require('./routes/qrCode');
 app.use('/api', qrRoutes); // Mounts /api/qrcodes and /api/scan-qr

@@ -81,15 +81,28 @@ const handleSubmit = async e => {
 
   try {
     if (isLogin) {
+      // For login: just use email/password, get wallet from server
       const res = await axios.post('http://localhost:5000/api/auth/login', {
         email: form.email,
         password: form.password
       });
-      alert(`Logged in as ${res.data.role}`);
+      
+      // Save full user data including wallet address from DB
+      const userData = {
+        token: res.data.token,
+        role: res.data.role,
+        name: res.data.name,
+        id: res.data.id,
+        walletAddress: res.data.walletAddress // <-- This comes from DB now
+      };
+      
       localStorage.setItem('token', res.data.token);
-      localStorage.setItem('user', JSON.stringify(res.data));
+      localStorage.setItem('user', JSON.stringify(userData));
+      
+      alert(`Logged in as ${res.data.role}`);
       navigate("/dashboard");
     } else {
+      // For registration: require wallet connection
       if (!walletConnected) {
         return alert("Please connect your MetaMask wallet first.");
       }
@@ -119,7 +132,7 @@ const handleSubmit = async e => {
             <select name="role" onChange={handleChange} value={form.role} required>
               <option value="">Select Role</option>
               <option value="Manufacturer">Manufacturer</option>
-              <option value="Distributor">Distributor</option>
+              <option value="Wholesaler">Wholesaler</option>
               <option value="Retailer">Retailer</option>
             </select>
             <input type="text" name="licenseNumber" placeholder="License Number" onChange={handleChange} value={form.licenseNumber} />

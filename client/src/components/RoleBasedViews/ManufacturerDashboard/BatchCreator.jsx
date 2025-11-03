@@ -6,7 +6,9 @@ import './ManufacturerView.css';
 const BatchCreator = ({ userId }) => {
   const [form, setForm] = useState({
     medicineName: '',
-    bigBoxCount: '',
+    expiryDate: '',
+    bigCartonCount: '',
+    bigBoxPerCarton: '',
     smallBoxPerBigBox: '',
     stripsPerSmallBox: ''
   });
@@ -33,9 +35,13 @@ const handleSubmit = async (e) => {
     const qrData = {
       batchId,
       medicineName: form.medicineName,
-      bigBoxCount: form.bigBoxCount,
+      expiryDate: form.expiryDate,
+      bigCartonCount: form.bigCartonCount,
+      bigBoxPerCarton: form.bigBoxPerCarton,
       smallBoxPerBigBox: form.smallBoxPerBigBox,
-      stripsPerSmallBox: form.stripsPerSmallBox
+      stripsPerSmallBox: form.stripsPerSmallBox,
+      createdBy: userId,
+      createdAt: new Date().toISOString()
     };
     const qrString = JSON.stringify(qrData);
     const qrImageUrl = await QRCode.toDataURL(qrString);
@@ -58,7 +64,9 @@ const handleSubmit = async (e) => {
     // Reset form
     setForm({
       medicineName: '',
-      bigBoxCount: '',
+      expiryDate: '',
+      bigCartonCount: '',
+      bigBoxPerCarton: '',
       smallBoxPerBigBox: '',
       stripsPerSmallBox: ''
     });
@@ -74,7 +82,9 @@ const handleSubmit = async (e) => {
       <h2>Create New Medicine Batch</h2>
       <form onSubmit={handleSubmit}>
         <input type="text" name="medicineName" placeholder="Medicine Name" value={form.medicineName} onChange={handleChange} required />
-        <input type="number" name="bigBoxCount" placeholder="Number of Big Boxes" value={form.bigBoxCount} onChange={handleChange} required />
+        <input type="date" name="expiryDate" placeholder="Expiry Date" value={form.expiryDate} onChange={handleChange} required />
+        <input type="number" name="bigCartonCount" placeholder="Number of Big Cartons" value={form.bigCartonCount} onChange={handleChange} required />
+        <input type="number" name="bigBoxPerCarton" placeholder="Big Boxes per Carton" value={form.bigBoxPerCarton} onChange={handleChange} required />
         <input type="number" name="smallBoxPerBigBox" placeholder="Small Boxes per Big Box" value={form.smallBoxPerBigBox} onChange={handleChange} required />
         <input type="number" name="stripsPerSmallBox" placeholder="Strips per Small Box" value={form.stripsPerSmallBox} onChange={handleChange} required />
         <button type="submit">Create Batch</button>

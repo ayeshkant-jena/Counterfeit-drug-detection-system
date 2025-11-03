@@ -7,6 +7,7 @@ import Navbar from './components/Navbar/Navbar';
 import VerifyMedicine from './pages/VerifyMedicine'
 import ReportMedicine from './pages/ReportMedicine';
 import MedicineSupplyDetail from './pages/MedicineSupplyDetail';
+import ScanAudit from './pages/ScanAudit';
 
 function App() {
   return (
@@ -19,6 +20,7 @@ function App() {
         <Route path="/verifymedicine" element={<VerifyMedicine />} />
         <Route path="/reportmedicine" element={<ReportMedicine />} />
         <Route path="/medicinesupplydetail" element={<MedicineSupplyDetail />} />
+        <Route path="/scan-audit" element={<ScanAudit />} />
       </Routes>
     </Router>
   );

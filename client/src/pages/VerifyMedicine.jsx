@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import jsQR from 'jsqr';
 import '../pages/CSS/VerifyMedicine.css'
 import icon1 from '../assets/icon1.png'
 import icon2 from '../assets/icon2.png'
@@ -9,6 +10,7 @@ import MedicineSupplyDetail from './MedicineSupplyDetail';
 
 const VerifyMedicine = () => {
     const [imageSrc, setImageSrc] = useState(null);
+    const [verifyResult, setVerifyResult] = useState(null);
     const [cameraOn, setCameraOn] = useState(false);
     const videoRef = useRef(null);
     const canvasRef = useRef(null);
@@ -57,6 +59,8 @@ const VerifyMedicine = () => {
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         const dataUrl = canvas.toDataURL('image/png');
         setImageSrc(dataUrl);
+        // process QR from captured image
+        processImageFromDataUrl(dataUrl);
         // stop camera after capture if you want:
         stopCamera();
     }
@@ -70,9 +74,62 @@ const VerifyMedicine = () => {
         if (!file) return;
         const reader = new FileReader();
         reader.onload = () => setImageSrc(reader.result);
+        reader.onloadend = () => {
+            setImageSrc(reader.result);
+            processImageFromDataUrl(reader.result);
+        };
         reader.readAsDataURL(file);
         // clear input so same file can be re-selected later
         e.target.value = null;
+    }
+
+    const processImageFromDataUrl = async (dataUrl) => {
+        try {
+            const img = new Image();
+            img.src = dataUrl;
+            await new Promise((resolve, reject) => { img.onload = resolve; img.onerror = reject; });
+            const canvas = canvasRef.current;
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const code = jsQR(imageData.data, canvas.width, canvas.height);
+            if (!code) {
+                alert('QR code not found in image');
+                return;
+            }
+
+            // Try parse QR payload
+            let parsed = null;
+            try {
+                parsed = JSON.parse(code.data);
+            } catch (err) {
+                // If QR contains just batchId string, normalize it
+                parsed = { batchId: code.data };
+            }
+
+            // send to server scan endpoint
+            const headers = { 'Content-Type': 'application/json' };
+            const token = localStorage.getItem('token');
+            if (token) headers.Authorization = `Bearer ${token}`;
+            const res = await fetch('http://localhost:5000/api/scan-qr', {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({ qr: parsed })
+            });
+
+            const result = await res.json();
+            if (res.ok) {
+                setVerifyResult(result);
+            } else {
+                setVerifyResult({ error: result.message || 'Not found' });
+            }
+
+        } catch (err) {
+            console.error('Error processing image for QR:', err);
+            alert('Error processing QR image');
+        }
     }
 
     const clearImage = () => setImageSrc(null);
@@ -128,36 +185,49 @@ const VerifyMedicine = () => {
             </div>
             <div className='result'>
                 <h1>Result</h1>
-                <div className='result-grid'>
-                    <div className='results'>
-                        <img src={icon1} alt="" />
-                        <div className='results-text'>
-                            <h4>Azithromycin 250</h4>
-                            <p>Tablet</p>
+                {!verifyResult && (
+                    <p>No verification performed yet.</p>
+                )}
+                {verifyResult && verifyResult.error && (
+                    <div className='result-grid'>
+                        <div className='results'>
+                            <h4>Error</h4>
+                            <p>{verifyResult.error}</p>
                         </div>
                     </div>
-                    <div className='results'>
-                        <img src={icon4} alt="" />
-                        <div className='results-text'>
-                            <h4>Batch/Serial Number</h4>
-                            <p>B24H5432AJ</p>
+                )}
+                {verifyResult && !verifyResult.error && (
+                    <div className='result-grid'>
+                        <div className='results'>
+                            <img src={icon1} alt="" />
+                            <div className='results-text'>
+                                <h4>{verifyResult.batch?.medicineName || 'Unknown'}</h4>
+                                <p>Medicine</p>
+                            </div>
+                        </div>
+                        <div className='results'>
+                            <img src={icon4} alt="" />
+                            <div className='results-text'>
+                                <h4>Batch ID</h4>
+                                <p>{verifyResult.batch?.batchId || 'N/A'}</p>
+                            </div>
+                        </div>
+                        <div className='results'>
+                            <img src={icon5} alt="" />
+                            <div className='results-text'>
+                                <h4>Status</h4>
+                                <p>{verifyResult.authentic ? 'Authentic' : 'Suspected Fake'}</p>
+                            </div>
+                        </div>
+                        <div className='results'>
+                            <img src={icon3} alt="" />
+                            <div className='results-text'>
+                                <h4>Expiry</h4>
+                                <p>{verifyResult.batch?.expiryDate ? new Date(verifyResult.batch.expiryDate).toLocaleDateString() : 'N/A'}</p>
+                            </div>
                         </div>
                     </div>
-                    <div className='results'>
-                        <img src={icon5} alt="" />
-                        <div className='results-text'>
-                            <h4>Status</h4>
-                            <p>Authentic</p>
-                        </div>
-                    </div>
-                    <div className='results'>
-                        <img src={icon3} alt="" />
-                        <div className='results-text'>
-                            <h4>Expiration</h4>
-                            <p>23/11/2026</p>
-                        </div>
-                    </div>
-                </div>
+                )}
             </div>
             <MedicineSupplyDetail/>
         </div>

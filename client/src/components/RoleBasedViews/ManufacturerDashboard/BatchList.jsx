@@ -55,7 +55,7 @@ const BatchList = ({ userId }) => {
               <tr key={batch.batchId}>
                 <td>{batch.batchId}</td>
                 <td>{batch.medicineName}</td>
-                <td>{batch.bigBoxCount}</td>
+                <td>{batch.bigBoxCount ?? (batch.bigCartonCount && batch.bigBoxPerCarton ? batch.bigCartonCount * batch.bigBoxPerCarton : 'N/A')}</td>
                 <td>{batch.smallBoxPerBigBox}</td>
                 <td>{batch.stripsPerSmallBox}</td>
                 <td>{new Date(batch.createdAt).toLocaleString()}</td>
