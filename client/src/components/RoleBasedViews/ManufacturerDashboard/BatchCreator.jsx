@@ -23,11 +23,13 @@ const handleSubmit = async (e) => {
   e.preventDefault();
 
   try {
-    // Step 1: Create Batch
+    // Step 1: Create Batch (authenticated request so server assigns createdBy)
+    const token = localStorage.getItem('token');
+    if (!token) throw new Error('Please login first');
+
     const batchRes = await axios.post('http://localhost:5000/api/batches/create', {
-      ...form,
-      createdBy: userId
-    });
+      ...form
+    }, { headers: { Authorization: `Bearer ${token}` } });
 
     const batchId = batchRes.data.batchId;
 
@@ -72,7 +74,8 @@ const handleSubmit = async (e) => {
     });
   } catch (err) {
     console.error('Batch Creation Failed:', err);
-    alert('❌ Error creating batch.');
+    const msg = err.response?.data?.error || err.response?.data?.details || err.message;
+    alert(`❌ Error creating batch: ${msg}`);
   }
 };
 

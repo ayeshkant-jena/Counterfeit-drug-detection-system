@@ -21,12 +21,12 @@ const formatDate = (d) => {
 const Tick = () => <span style={{ color: 'green', fontWeight: 700, marginRight: 6 }}>✓</span>;
 
 const defaultSupplyChain = [
-  { key: 'manufactured', name: 'Manufactured', received: false, date: null },
-  { key: 'shippedToDistributor', name: 'Shipped to Distributor', received: false, date: null },
-  { key: 'receivedByDistributor', name: 'Received by Distributor', received: false, date: null },
-  { key: 'shippedToPharmacist', name: 'Shipped to Pharmacist', received: false, date: null },
-  { key: 'receivedByPharmacist', name: 'Received by Pharmacist', received: false, date: null },
-  { key: 'pickedUpByPatient', name: 'Picked up by Patient', received: false, date: null }
+  { key: 'MANUFACTURED', name: 'Manufactured', received: false, date: null, details: {} },
+  { key: 'SHIPPED_TO_DISTRIBUTOR', name: 'Shipped to Distributor', received: false, date: null, details: {} },
+  { key: 'RECEIVED_BY_DISTRIBUTOR', name: 'Received by Distributor', received: false, date: null, details: {} },
+  { key: 'SHIPPED_TO_RETAILER', name: 'Shipped to Retailer', received: false, date: null, details: {} },
+  { key: 'RECEIVED_BY_RETAILER', name: 'Received by Retailer', received: false, date: null, details: {} },
+  { key: 'DISPENSED_TO_PATIENT', name: 'Dispensed to Patient', received: false, date: null, details: {} }
 ];
 
 const emptyBatchTemplate = {
@@ -58,15 +58,37 @@ const MedicineSupplyDetail = () => {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(`${API_BASE}/api/batches/${id}`);
-      if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(txt || `Status ${res.status}`);
+      // Fetch batch details and supply chain events in parallel
+      const [batchRes, eventsRes] = await Promise.all([
+        fetch(`${API_BASE}/api/batches/${id}`),
+        fetch(`${API_BASE}/api/supply-chain/batch/${id}`)
+      ]);
+
+      if (!batchRes.ok) {
+        const txt = await batchRes.text();
+        throw new Error(txt || `Status ${batchRes.status}`);
       }
-      const data = await res.json();
-      // ensure supplyChain exists
-      data.supplyChain = Array.isArray(data.supplyChain) && data.supplyChain.length ? data.supplyChain : JSON.parse(JSON.stringify(defaultSupplyChain));
-      setBatch(data);
+
+      const [batchData, eventsData] = await Promise.all([
+        batchRes.json(),
+        eventsRes.ok ? eventsRes.json() : []
+      ]);
+
+      // Convert events into supply chain format
+      const supplyChain = JSON.parse(JSON.stringify(defaultSupplyChain));
+      eventsData.forEach(event => {
+        const chainStep = supplyChain.find(step => step.key === event.eventType);
+        if (chainStep) {
+          chainStep.received = true;
+          chainStep.date = event.timestamp;
+          chainStep.details = event.details || {};
+          chainStep.location = event.location;
+          chainStep.performedBy = event.performedBy;
+        }
+      });
+
+      batchData.supplyChain = supplyChain;
+      setBatch(batchData);
     } catch (err) {
       console.error('Fetch batch error', err);
       setError('Batch not found or server error.');
@@ -79,16 +101,36 @@ const MedicineSupplyDetail = () => {
   const markStep = async (id, stepKey) => {
     if (!id || !stepKey) return;
     try {
-      await fetch(`${API_BASE}/api/batches/${id}/supply-update`, {
+      // Get the user's authentication token
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setError('Please login to record events');
+        return;
+      }
+
+      await fetch(`${API_BASE}/api/supply-chain`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ stepKey })
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          batchId: id,
+          eventType: stepKey,
+          location: 'Current Location', // In a real app, this would be captured from user input or GPS
+          details: {
+            temperature: Math.round(20 + Math.random() * 5), // Simulated temperature between 20-25°C
+            humidity: Math.round(40 + Math.random() * 20), // Simulated humidity between 40-60%
+            notes: 'Event recorded via supply chain tracking system'
+          }
+        })
       });
+      
       // re-fetch updated batch
       await fetchBatch(id);
     } catch (err) {
       console.error('Mark step failed', err);
-      setError('Failed to update step.');
+      setError('Failed to record event. Please ensure you are logged in and have permission.');
     }
   };
 
@@ -203,17 +245,37 @@ const MedicineSupplyDetail = () => {
               </div>
               <div className='scg2'>
                 {step.received ? (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <Tick />
-                    <span>{formatDate(step.date)}</span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <Tick />
+                      <span>{new Date(step.date).toLocaleString()}</span>
+                    </div>
+                    {step.location && (
+                      <div style={{ fontSize: '0.9em', color: '#666' }}>
+                        Location: {step.location}
+                      </div>
+                    )}
+                    {step.performedBy && (
+                      <div style={{ fontSize: '0.9em', color: '#666' }}>
+                        By: {step.performedBy.name} ({step.performedBy.role})
+                      </div>
+                    )}
+                    {step.details && Object.keys(step.details).length > 0 && (
+                      <div style={{ fontSize: '0.9em', color: '#666', marginTop: 4 }}>
+                        {step.details.temperature && <div>Temperature: {step.details.temperature}°C</div>}
+                        {step.details.humidity && <div>Humidity: {step.details.humidity}%</div>}
+                        {step.details.transportMethod && <div>Transport: {step.details.transportMethod}</div>}
+                        {step.details.notes && <div>Notes: {step.details.notes}</div>}
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ color: '#b00', fontWeight: 700, marginRight: 6 }}>Not received</span>
+                    <span style={{ color: '#b00', fontWeight: 700, marginRight: 6 }}>Pending</span>
                     {/* allow manual marking for demo / admin */}
                     {batch.batchId ? (
                       <button onClick={() => markStep(batch.batchId, step.key)} style={{ marginLeft: 12 }}>
-                        Mark received
+                        Record Event
                       </button>
                     ) : (
                       <span style={{ marginLeft: 12, color: '#666' }}>Provide batch ID to update</span>

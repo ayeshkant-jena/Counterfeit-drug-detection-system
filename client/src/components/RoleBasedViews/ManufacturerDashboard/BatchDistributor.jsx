@@ -88,8 +88,8 @@ const BatchDistributor = ({ userId }) => {
             const selectedBatchData = batches.find(b => b.batchId === selectedBatch);
             const selectedDistributor = distributors.find(d => d._id === form.distributorId);
 
-            const user = JSON.parse(localStorage.getItem('user'));
-            if (!user?.token) {
+            const token = localStorage.getItem('token');
+            if (!token) {
                 throw new Error('Please login first');
             }
 
@@ -103,7 +103,7 @@ const BatchDistributor = ({ userId }) => {
                 expiryDate: selectedBatchData.expiryDate
             }, { 
                 headers: { 
-                    'Authorization': `Bearer ${user.token}` 
+                    'Authorization': `Bearer ${token}` 
                 } 
             });
 
@@ -140,7 +140,9 @@ const BatchDistributor = ({ userId }) => {
             
         } catch (err) {
             console.error('Distribution creation failed:', err);
-            alert('❌ Error creating distribution');
+            const resp = err.response?.data;
+            const msg = resp ? (typeof resp === 'string' ? resp : JSON.stringify(resp)) : (err.message || 'Unknown error');
+            alert(`❌ Error creating distribution: ${msg}`);
         }
     };
 

@@ -37,14 +37,20 @@ router.post('/create', requireAuth, async (req, res) => {
     const {
         batchId,
         medicineName,
-        manufacturerId,
         receiverId,
         receiverRole,
-        bigBoxCount,
+        bigBoxCount: rawBigBoxCount,
         expiryDate
     } = req.body;
-    const senderId = req.user?.id;
-    const senderRole = req.user?.role;
+
+    // require authentication for creating distributions
+    if (!req.user) {
+        return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const senderId = req.user.id;
+    const senderRole = req.user.role;
+    const bigBoxCount = Number(rawBigBoxCount || 0);
 
     try {
         // Verify batch exists
@@ -54,24 +60,23 @@ router.post('/create', requireAuth, async (req, res) => {
         }
 
         let availableForSender;
-        
         // For manufacturers: check against total boxes from batch
         if (req.user.role === 'Manufacturer') {
             // Verify manufacturer owns this batch
-            if (batch.createdBy.toString() !== req.user.id.toString()) {
-                return res.status(403).json({ error: 'Not authorized to distribute this batch' });
+            if (batch.createdBy && batch.createdBy.toString() !== req.user.id.toString()) {
+                console.warn('Manufacturer ownership mismatch:', { batchId, batchCreatedBy: batch.createdBy, requesterId: req.user.id });
+                return res.status(403).json({ error: 'Not authorized to distribute this batch', details: { batchId, batchCreatedBy: batch.createdBy, requesterId: req.user.id } });
             }
 
-            const totalBoxes = batch.bigCartonCount * batch.bigBoxPerCarton;
+            const totalBoxes = (batch.bigCartonCount || 0) * (batch.bigBoxPerCarton || 0);
             const sentByManufacturer = await Distribution.aggregate([
                 { $match: { batchId, senderId: req.user.id } },
                 { $group: { _id: null, sum: { $sum: '$bigBoxCount' } } }
             ]);
             const sent = (sentByManufacturer[0] && sentByManufacturer[0].sum) || 0;
             availableForSender = totalBoxes - sent;
-        } 
-        // For wholesalers/retailers: check against received - sent
-        else {
+        } else {
+            // For wholesalers/retailers: check against received - sent
             const receivedBySender = await Distribution.aggregate([
                 { $match: { batchId, receiverId: senderId } },
                 { $group: { _id: null, sum: { $sum: '$bigBoxCount' } } }
@@ -94,7 +99,7 @@ router.post('/create', requireAuth, async (req, res) => {
             distributionId,
             batchId,
             medicineName,
-            manufacturerId,
+            manufacturerId: batch.createdBy || null,
             senderId,
             senderRole,
             receiverId,
@@ -127,7 +132,7 @@ router.post('/create', requireAuth, async (req, res) => {
         res.status(201).json({ message: 'Distribution created', distributionId });
     } catch (err) {
         console.error('Distribution creation error:', err);
-        res.status(500).json({ error: 'Failed to create distribution' });
+        res.status(500).json({ error: 'Failed to create distribution', details: err.message });
     }
 });
 

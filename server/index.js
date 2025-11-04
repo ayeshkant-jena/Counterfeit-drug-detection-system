@@ -24,6 +24,10 @@ app.use('/api/distributions', distributionRoutes);
 const scanRoutes = require('./routes/scanRoutes');
 app.use('/api/scans', scanRoutes);
 
+// Supply chain tracking routes
+const supplyChainRoutes = require('./routes/supplyChainRoutes');
+app.use('/api/supply-chain', supplyChainRoutes);
+
 // QR routes
 const qrRoutes = require('./routes/qrCode');
 app.use('/api', qrRoutes); // Mounts /api/qrcodes and /api/scan-qr

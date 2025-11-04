@@ -5,8 +5,8 @@ const Batch = require('../models/Batch');
 const User = require('../models/User');
 const router = express.Router();
 
-// Create a new batch
-router.post('/create', async (req, res) => {
+// Create a new batch (requires authentication so server can set createdBy)
+router.post('/create', require('../middleware/auth').requireAuth, async (req, res) => {
   let { 
     medicineName, 
     expiryDate,
@@ -119,6 +119,19 @@ router.post('/verify', async (req, res) => {
       status: 'error',
       message: 'Failed to verify batch' 
     });
+  }
+});
+
+// Debug: get batch details (including createdBy) - useful during troubleshooting
+router.get('/details/:batchId', async (req, res) => {
+  try {
+    const batch = await Batch.findOne({ batchId: req.params.batchId }).lean();
+    if (!batch) return res.status(404).json({ error: 'Batch not found' });
+    // return createdBy and other internal fields for debugging
+    res.json({ batchId: batch.batchId, createdBy: batch.createdBy, createdAt: batch.createdAt, medicineName: batch.medicineName });
+  } catch (err) {
+    console.error('Error fetching batch details:', err);
+    res.status(500).json({ error: 'Failed to fetch batch details' });
   }
 });
 

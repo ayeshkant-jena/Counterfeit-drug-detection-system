@@ -24,7 +24,7 @@ import RetailerView from "./RoleBasedViews/RetailerDashboard/RetailerView";
     switch (role) {
       case 'Manufacturer':
         return <ManufacturerView />;
-      case 'Distributor':
+      case 'Wholesaler':
         return <DistributorView />;
       case 'Retailer':
         return <RetailerView />;
