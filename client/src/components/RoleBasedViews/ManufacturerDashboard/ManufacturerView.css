@@ -109,3 +109,35 @@
   background-color: #f2f2f2;
   font-weight: bold;
 }
+
+.batch-number-field {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.batch-number-field input {
+  flex: 1;
+  background-color: #f0f0f0;
+  cursor: not-allowed;
+  font-family: monospace;
+  font-size: 1.1em;
+  letter-spacing: 2px;
+  text-align: center;
+}
+
+.regenerate-btn {
+  padding: 10px 15px !important;
+  background-color: #4CAF50 !important;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+  width: auto !important;
+}
+
+.regenerate-btn:hover {
+  background-color: #45a049 !important;
+}

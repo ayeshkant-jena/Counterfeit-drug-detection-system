@@ -5,32 +5,39 @@ const Batch = require('../models/Batch');
 const User = require('../models/User');
 const router = express.Router();
 
-// Create a new batch (requires authentication so server can set createdBy)
+// Create a new batch (requires manufacturer authentication)
 router.post('/create', require('../middleware/auth').requireAuth, async (req, res) => {
-  let { 
-    medicineName, 
-    expiryDate,
-    bigCartonCount,
-    bigBoxPerCarton,
-    smallBoxPerBigBox,
-    stripsPerSmallBox,
-    createdBy 
-  } = req.body;
-  const batchId = uuidv4();
-
   try {
-    // prefer authenticated user id if available (req.user set by auth middleware)
-    if (req.user && req.user.id) {
-      createdBy = req.user.id;
+    // Verify user is a manufacturer
+    if (!req.user || req.user.role !== 'Manufacturer') {
+      return res.status(403).json({ error: 'Only manufacturers can create batches' });
     }
+
+    const { 
+      medicineName, 
+      expiryDate,
+      totalCartons,
+      boxesPerCarton,
+      smallBoxesPerBox,
+      stripsPerSmallBox,
+      tabletsPerStrip
+    } = req.body;
+
+    // Generate unique batch ID
+    const batchId = uuidv4();
+
+    // Use authenticated user's ID (set by auth middleware)
+    const createdBy = req.user.id;
+
     const newBatch = new Batch({
       batchId,
       medicineName,
       expiryDate,
-      bigCartonCount,
-      bigBoxPerCarton,
-      smallBoxPerBigBox,
+      bigCartonCount: totalCartons,
+      bigBoxPerCarton: boxesPerCarton,
+      smallBoxPerBigBox: smallBoxesPerBox,
       stripsPerSmallBox,
+      tabletsPerStrip,
       createdBy
     });
 

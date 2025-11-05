@@ -1,6 +1,7 @@
-// /client/src/components/DistributorDashboard/DistributorView.jsx
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import QrScanner from 'qr-scanner';
 import './DistributorView.css';
 import BatchList from './BatchList';
 import ShipmentSender from './ShipmentSender';
@@ -13,11 +14,22 @@ const DistributorView = () => {
   const name = user?.name || "Distributor";
   const walletAddress = user?.walletAddress?.toLowerCase();
   
-  const [showBatchList, setShowBatchList] = useState(false);
-  const [showShipmentSender, setShowShipmentSender] = useState(false);
+  const [activeTab, setActiveTab] = useState('scan');
+  const [showScanner, setShowScanner] = useState(false);
+  const [scanResult, setScanResult] = useState(null);
+  const [batches, setBatches] = useState([]);
+  const [distributions, setDistributions] = useState([]);
+  const [stats, setStats] = useState({
+    batchesReceived: 0,
+    shipmentsCreated: 0,
+    activeBatches: 0
+  });
+  
   const [contract, setContract] = useState(null);
+  const videoRef = useRef(null);
+  const scannerRef = useRef(null);
 
-  // Verify we're properly logged in with correct role
+  // Auth check
   useEffect(() => {
     if (!user || !user.walletAddress || user.role !== 'Wholesaler') {
       alert('Please log in as a Wholesaler');
@@ -26,9 +38,10 @@ const DistributorView = () => {
     }
   }, [user, navigate]);
 
+  // Load blockchain contract
   const loadContract = async () => {
     if (!window.ethereum) {
-      console.log("MetaMask not found - blockchain features disabled");
+      console.error("MetaMask not found - blockchain features disabled");
       return;
     }
 
@@ -37,7 +50,6 @@ const DistributorView = () => {
       const signer = await provider.getSigner();
       const contractInstance = getContract(signer);
       setContract(contractInstance);
-      console.log("Contract loaded for wallet:", walletAddress);
     } catch (err) {
       console.error("Contract loading failed:", err);
     }
@@ -46,40 +58,226 @@ const DistributorView = () => {
   useEffect(() => {
     if (walletAddress) {
       loadContract();
+      fetchStats();
+      fetchBatches();
     }
   }, [walletAddress]);
 
-  if (!walletAddress) {
-    return <div>Loading...</div>;
-  }
+  const fetchStats = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const [batchesRes, distributionsRes] = await Promise.all([
+        axios.get(`http://localhost:5000/api/batches/stats/${walletAddress}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        }),
+        axios.get(`http://localhost:5000/api/distributions/stats/${walletAddress}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+      ]);
+
+      setStats({
+        batchesReceived: batchesRes.data.received,
+        shipmentsCreated: distributionsRes.data.created,
+        activeBatches: batchesRes.data.active
+      });
+    } catch (err) {
+      console.error('Error fetching stats:', err);
+    }
+  };
+
+  const fetchBatches = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.get(`http://localhost:5000/api/batches/by-holder/${walletAddress}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setBatches(res.data);
+    } catch (err) {
+      console.error('Error fetching batches:', err);
+    }
+  };
+
+  // QR Code Scanner
+  const startScanner = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: "environment" } 
+      });
+      
+      videoRef.current.srcObject = stream;
+      await videoRef.current.play();
+
+      scannerRef.current = new QrScanner(
+        videoRef.current,
+        async (result) => {
+          const qrData = JSON.parse(result.data);
+          
+          try {
+            const token = localStorage.getItem('token');
+            const verifyRes = await axios.post('http://localhost:5000/api/distributions/verify', {
+              batchId: qrData.batchId,
+              distributionId: qrData.distributionId,
+              verificationCode: qrData.verificationCode
+            }, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+
+            setScanResult({
+              success: true,
+              message: 'Batch verified successfully!',
+              data: verifyRes.data
+            });
+
+            // Update blockchain
+            if (contract) {
+              try {
+                await contract.verifyDistribution(
+                  qrData.batchId,
+                  qrData.distributionId,
+                  walletAddress
+                );
+              } catch (err) {
+                console.error('Blockchain verification failed:', err);
+              }
+            }
+
+            fetchBatches(); // Refresh batches list
+            fetchStats(); // Update stats
+
+          } catch (err) {
+            setScanResult({
+              success: false,
+              message: err.response?.data?.error || 'Verification failed',
+              error: err.message
+            });
+          }
+        },
+        { highlightScanRegion: true }
+      );
+
+      scannerRef.current.start();
+      setShowScanner(true);
+
+    } catch (err) {
+      console.error('Camera error:', err);
+      alert('Cannot access camera. Please check permissions.');
+    }
+  };
+
+  const stopScanner = () => {
+    if (scannerRef.current) {
+      scannerRef.current.stop();
+      scannerRef.current.destroy();
+      scannerRef.current = null;
+    }
+    if (videoRef.current?.srcObject) {
+      videoRef.current.srcObject.getTracks().forEach(track => track.stop());
+    }
+    setShowScanner(false);
+  };
+
+  // Cleanup
+  useEffect(() => {
+    return () => {
+      stopScanner();
+    };
+  }, []);
+
+  if (!walletAddress) return <div>Loading...</div>;
 
   return (
     <div className="distributor-dashboard">
-      <h1>Welcome, {name} 📦</h1>
-      <h3>Your Wallet: {walletAddress}</h3>
+      <h1>Welcome, {name}</h1>
+      <div className="wallet-info">
+        <span>🔗 {walletAddress}</span>
+      </div>
 
-      <div className="stats-cards">
-        <div className="card">
-          <h2>Batches Received</h2>
-          <p>10</p>
+      <div className="stats-grid">
+        <div className="stat-card">
+          <h3>Batches Received</h3>
+          <p>{stats.batchesReceived}</p>
         </div>
-        <div className="card">
-          <h2>Shipments Sent</h2>
-          <p>6</p>
+        <div className="stat-card">
+          <h3>Shipments Created</h3>
+          <p>{stats.shipmentsCreated}</p>
+        </div>
+        <div className="stat-card">
+          <h3>Active Batches</h3>
+          <p>{stats.activeBatches}</p>
         </div>
       </div>
 
-      <div className="actions">
-        <button onClick={() => setShowBatchList(!showBatchList)}>
-          {showBatchList ? 'Hide Batches' : 'View Received Batches'}
+      <div className="tabs">
+        <button 
+          className={activeTab === 'scan' ? 'active' : ''} 
+          onClick={() => setActiveTab('scan')}
+        >
+          Scan QR Code
         </button>
-        <button onClick={() => setShowShipmentSender(!showShipmentSender)}>
-          {showShipmentSender ? 'Hide Sender' : 'Send to Retailer'}
+        <button 
+          className={activeTab === 'batches' ? 'active' : ''} 
+          onClick={() => setActiveTab('batches')}
+        >
+          Manage Batches
+        </button>
+        <button 
+          className={activeTab === 'distribute' ? 'active' : ''} 
+          onClick={() => setActiveTab('distribute')}
+        >
+          Distribute
         </button>
       </div>
 
-  {showBatchList && <BatchList userId={walletAddress} />}
-  {showShipmentSender && <ShipmentSender contract={contract} userId={walletAddress} />}
+      <div className="tab-content">
+        {activeTab === 'scan' && (
+          <div className="scanner-section">
+            {!showScanner ? (
+              <button onClick={startScanner}>Start QR Scanner</button>
+            ) : (
+              <>
+                <button onClick={stopScanner}>Stop Scanner</button>
+                <div className="video-container">
+                  <video ref={videoRef} />
+                </div>
+              </>
+            )}
+
+            {scanResult && (
+              <div className={`scan-result ${scanResult.success ? 'success' : 'error'}`}>
+                <h3>{scanResult.success ? '✅ Success' : '❌ Error'}</h3>
+                <p>{scanResult.message}</p>
+                {scanResult.success && (
+                  <div className="batch-details">
+                    <p><strong>Batch ID:</strong> {scanResult.data.batchId}</p>
+                    <p><strong>Medicine:</strong> {scanResult.data.medicineName}</p>
+                    <p><strong>Quantity:</strong> {scanResult.data.quantity.total} units</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'batches' && (
+          <BatchList 
+            batches={batches} 
+            onUpdate={fetchBatches}
+            contract={contract}
+          />
+        )}
+
+        {activeTab === 'distribute' && (
+          <ShipmentSender 
+            batches={batches}
+            contract={contract}
+            userId={walletAddress}
+            onDistributionComplete={() => {
+              fetchBatches();
+              fetchStats();
+            }}
+          />
+        )}
+      </div>
     </div>
   );
 };
