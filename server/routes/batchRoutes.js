@@ -8,43 +8,90 @@ const router = express.Router();
 // Create a new batch (requires manufacturer authentication)
 router.post('/create', require('../middleware/auth').requireAuth, async (req, res) => {
   try {
-    // Verify user is a manufacturer
-    if (!req.user || req.user.role !== 'Manufacturer') {
+    // Ensure authenticated
+    if (!req.user) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    // Only manufacturers can create batches
+    if (req.user.role !== 'Manufacturer') {
       return res.status(403).json({ error: 'Only manufacturers can create batches' });
     }
 
-    const { 
-      medicineName, 
+    // Accept client payload and map to schema fields
+    const {
+      medicineName,
+      manufacturer,
+      batchNumber,
+      manufacturingDate,
       expiryDate,
       totalCartons,
       boxesPerCarton,
       smallBoxesPerBox,
       stripsPerSmallBox,
-      tabletsPerStrip
+      tabletsPerStrip,
+      status
     } = req.body;
 
-    // Generate unique batch ID
-    const batchId = uuidv4();
+    // Log incoming request for easier debugging
+    console.log('Create batch request by user:', { userId: req.user.id, role: req.user.role });
+    console.log('Request body:', req.body);
 
-    // Use authenticated user's ID (set by auth middleware)
-    const createdBy = req.user.id;
+    // Use provided batchNumber as batchId when available (keeps QR reference stable), else generate
+    const batchId = batchNumber || uuidv4();
+
+    // manufacturerId from authenticated user
+    const manufacturerId = req.user.id;
+
+    // Generate verification key for batch security
+    const verificationKeyData = `${batchId}${medicineName}${manufacturerId}${Date.now()}`;
+    const verificationKey = require('crypto')
+      .createHash('sha256')
+      .update(verificationKeyData)
+      .digest('hex')
+      .substring(0, 16);
 
     const newBatch = new Batch({
       batchId,
       medicineName,
-      expiryDate,
-      bigCartonCount: totalCartons,
-      bigBoxPerCarton: boxesPerCarton,
-      smallBoxPerBigBox: smallBoxesPerBox,
-      stripsPerSmallBox,
-      tabletsPerStrip,
-      createdBy
+      manufacturer: manufacturer || req.user.name || 'Unknown Manufacturer',
+      manufacturerId,
+      // Backwards-compatible fields used by older UI components
+      createdBy: manufacturerId,
+      bigCartonCount: Number(totalCartons) || 0,
+      bigBoxPerCarton: Number(boxesPerCarton) || 0,
+      smallBoxPerBigBox: Number(smallBoxesPerBox) || 0,
+      manufacturingDate: manufacturingDate ? new Date(manufacturingDate) : undefined,
+      expiryDate: expiryDate ? new Date(expiryDate) : undefined,
+      totalCartons: Number(totalCartons) || 0,
+      boxesPerCarton: Number(boxesPerCarton) || 0,
+      smallBoxesPerBox: Number(smallBoxesPerBox) || 0,
+      stripsPerSmallBox: Number(stripsPerSmallBox) || 0,
+      tabletsPerStrip: Number(tabletsPerStrip) || 0,
+      status: status || 'created',
+      verificationKey
     });
 
+    // Log the batch object to be saved for debugging
+    console.log('Saving newBatch (preview):', newBatch.toObject ? newBatch.toObject() : newBatch);
+
     await newBatch.save();
-    res.status(201).json({ message: 'Batch created', batchId });
+    res.status(201).json({ message: 'Batch created', batchId, blockchainHash: newBatch.blockchainHash });
   } catch (err) {
-    console.error('Batch creation error:', err);
+    console.error('Batch creation error:', {
+      message: err.message,
+      stack: err.stack,
+      body: req.body,
+      user: req.user
+    });
+
+    if (err.name === 'ValidationError') {
+      return res.status(400).json({
+        error: 'Invalid batch data',
+        details: Object.values(err.errors).map(e => e.message)
+      });
+    }
+
     res.status(500).json({ error: 'Batch creation failed', details: err.message });
   }
 });
@@ -75,22 +122,25 @@ router.get('/count/by-user/:userId', async (req, res) => {
 // GET batches by user id
 router.get('/by-user/:userId', async (req, res) => {
   try {
-    const param = req.params.userId;
-    // if param looks like a wallet address, try resolving to a user id
-    let userIdResolved = null;
-    if (typeof param === 'string' && param.toLowerCase().startsWith('0x')) {
-      const user = await User.findOne({ walletAddress: param.toLowerCase() }).lean();
-      if (user) userIdResolved = user._id.toString();
-    }
+    const userId = req.params.userId.trim();
+    console.log("📥 Fetching batches for user:", userId);
 
-    const query = userIdResolved ? { $or: [{ createdBy: param }, { createdBy: userIdResolved }] } : { createdBy: param };
-    const batches = await Batch.find(query);
+    // Match either createdBy or manufacturerId field
+    const batches = await Batch.find({
+      $or: [
+        { createdBy: userId },
+        { manufacturerId: userId }
+      ]
+    }).lean();
+
+    console.log(`📦 Found ${batches.length} batches`);
     res.json(batches);
   } catch (err) {
     console.error("Error fetching batches:", err);
     res.status(500).json({ error: 'Failed to fetch batches' });
   }
 });
+
 
 // Verify batch exists
 router.post('/verify', async (req, res) => {

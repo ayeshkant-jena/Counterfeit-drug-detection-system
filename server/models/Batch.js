@@ -8,6 +8,12 @@ const batchSchema = new mongoose.Schema({
   manufacturer: { type: String, required: true }, // Manufacturer's name
   manufacturerId: { type: String, required: true }, // Manufacturer's ID
   expiryDate: { type: Date, required: true },
+  // Backwards-compatible creator reference (may be user id or wallet address)
+  createdBy: { type: String },
+  // Legacy / UI-compatible alias fields
+  bigCartonCount: { type: Number },
+  bigBoxPerCarton: { type: Number },
+  smallBoxPerBigBox: { type: Number },
   
   // Inventory tracking
   totalCartons: { type: Number, required: true },

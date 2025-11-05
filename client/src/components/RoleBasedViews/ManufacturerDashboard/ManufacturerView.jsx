@@ -37,13 +37,33 @@ const ManufacturerView = () => {
     }
 
     try {
+      // Ask user to connect accounts (may throw if user cancels or request pending)
+      await window.ethereum.request({ method: 'eth_requestAccounts' });
+
       const provider = new ethers.BrowserProvider(window.ethereum);
+      // ensure provider is ready
+      await provider.ready;
+
       const signer = await provider.getSigner();
+      const signerAddress = await signer.getAddress();
+
+      if (signerAddress.toLowerCase() !== (walletAddress || '').toLowerCase()) {
+        alert('Please switch MetaMask to the account that matches your registered wallet address.');
+        return;
+      }
+
       const contractInstance = getContract(signer);
       setContract(contractInstance);
       console.log("Contract loaded for wallet:", walletAddress);
     } catch (err) {
       console.error("Contract loading failed:", err);
+      if (err?.code === -32002) {
+        alert('There is already a pending MetaMask request — please check your wallet and approve the connection.');
+      } else if (err?.code === 4001) {
+        alert('MetaMask connection was rejected. Please connect your wallet to use blockchain features.');
+      } else {
+        alert('Failed to connect to MetaMask. Ensure it is installed and unlocked.');
+      }
     }
   };
 

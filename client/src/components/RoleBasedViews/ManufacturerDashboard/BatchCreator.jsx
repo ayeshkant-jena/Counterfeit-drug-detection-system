@@ -59,11 +59,18 @@ const BatchCreator = ({ userId }) => {
       const token = localStorage.getItem('token');
       if (!token) throw new Error('Please login first');
 
-      // Create batch with medicine count calculations
+      // Create batch with proper schema mapping
       const batchRes = await axios.post('http://localhost:5000/api/batches/create', {
-        ...form,
-        totalMedicineCount,
-        remainingMedicineCount: totalMedicineCount, // Initially same as total
+        medicineName: form.medicineName,
+        manufacturer: form.manufacturer,
+        batchNumber: form.batchNumber,
+        manufacturingDate: form.manufacturingDate,
+        expiryDate: form.expiryDate,
+        totalCartons: Number(form.totalCartons),
+        boxesPerCarton: Number(form.boxesPerCarton),
+        smallBoxesPerBox: Number(form.smallBoxesPerBox),
+        stripsPerSmallBox: Number(form.stripsPerSmallBox),
+        tabletsPerStrip: Number(form.tabletsPerStrip),
         status: 'created'
       }, { 
         headers: { Authorization: `Bearer ${token}` }
@@ -112,8 +119,12 @@ const BatchCreator = ({ userId }) => {
 
     } catch (err) {
       console.error('Batch Creation Failed:', err);
+      // Log full server response body when available for debugging
+      if (err.response && err.response.data) {
+        console.error('Server response data:', err.response.data);
+      }
       const msg = err.response?.data?.error || err.response?.data?.details || err.message;
-      alert(`❌ Error creating batch: ${msg}`);
+      alert(`❌ Error creating batch: ${JSON.stringify(msg)}`);
     }
   };
 
