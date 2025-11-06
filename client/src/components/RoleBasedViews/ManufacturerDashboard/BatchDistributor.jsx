@@ -1,238 +1,202 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import QRCode from 'qrcode';
-import './ManufacturerView.css';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+
 
 const BatchDistributor = ({ userId: propUserId }) => {
-    const [batches, setBatches] = useState([]);
-    const [distributors, setDistributors] = useState([]);
-    const [selectedBatch, setSelectedBatch] = useState('');
-    const [searchTerm, setSearchTerm] = useState('');
-    const [qrImage, setQrImage] = useState(null);
-    const [availableBoxes, setAvailableBoxes] = useState(0);
-    const [loading, setLoading] = useState(true); // ✅ FIXED: Add loading indicator
+  const [userId, setUserId] = useState('');
+  const [batches, setBatches] = useState([]);
+  const [distributors, setDistributors] = useState([]);
+  const [selectedBatch, setSelectedBatch] = useState('');
+  const [selectedDistributor, setSelectedDistributor] = useState('');
+  const [quantity, setQuantity] = useState('');
+  const [loading, setLoading] = useState(false);
 
-    const [form, setForm] = useState({
-        distributorId: '',
-        bigBoxCount: '',
-    });
+  useEffect(() => {
+  const stored = localStorage.getItem('user');
+  console.log("🟡 Raw localStorage user:", stored);
+  console.log("🟢 Prop userId received:", propUserId);
+}, [propUserId]);
 
-    // ✅ FIXED: Unified userId handling
-    const [userId, setUserId] = useState(propUserId || '');
 
-    useEffect(() => {
-        // Load from localStorage if propUserId missing
-        const storedUser = JSON.parse(localStorage.getItem('user'));
-        if (!propUserId && storedUser?.id) {
-            setUserId(storedUser.id);
+  // ✅ STEP 1: Fetch userId from props or localStorage
+  useEffect(() => {
+    const storedUser = localStorage.getItem('user');
+    let effectiveUserId = null;
+
+    try {
+      const parsedUser = storedUser ? JSON.parse(storedUser) : null;
+      effectiveUserId = parsedUser?._id || parsedUser?.id || propUserId;
+
+    } catch (err) {
+      console.warn("⚠️ Failed to parse user from localStorage", err);
+    }
+
+    if (effectiveUserId) {
+      setUserId(effectiveUserId);
+      console.log("✅ Effective userId for BatchDistributor:", effectiveUserId);
+    } else {
+      console.warn("⚠️ No valid userId found in props or localStorage");
+    }
+  }, [propUserId]);
+
+  // ✅ STEP 2: Fetch batches + distributors after userId is ready
+  useEffect(() => {
+    if (!userId) return;
+
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        console.log("📥 Fetching data for userId:", userId);
+
+        // Fetch batches for this manufacturer
+        const batchUrl = `http://localhost:5000/api/batches/by-user/${userId}`;
+        const batchesRes = await axios.get(batchUrl);
+        console.log("✅ API Response for batches:", batchesRes.data);
+
+        if (Array.isArray(batchesRes.data)) {
+          setBatches(batchesRes.data);
+        } else if (batchesRes.data?.batches) {
+          setBatches(batchesRes.data.batches);
+        } else {
+          console.warn("⚠️ Unexpected batches structure:", batchesRes.data);
+          setBatches([]);
         }
-    }, [propUserId]);
 
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                setLoading(true);
+        // Fetch distributors
+        const distributorsRes = await axios.get('http://localhost:5000/api/distributions/distributors');
+        console.log("✅ API Response for distributors:", distributorsRes.data);
 
-                // ✅ Fetch manufacturer's batches
-                const batchesRes = await axios.get(`http://localhost:5000/api/batches/by-user/${userId}`);
-                console.log('✅ Batches fetched:', batchesRes.data);
-                setBatches(Array.isArray(batchesRes.data) ? batchesRes.data : []);
-
-                // ✅ Fetch distributors
-                const distributorsRes = await axios.get('http://localhost:5000/api/distributions/distributors');
-                console.log('✅ Distributors fetched:', distributorsRes.data);
-                setDistributors(Array.isArray(distributorsRes.data) ? distributorsRes.data : []);
-
-                // Log useful info
-                const user = JSON.parse(localStorage.getItem('user'));
-                console.log('Current user:', { 
-                    id: user?.id,
-                    role: user?.role,
-                    walletAddress: user?.walletAddress
-                });
-            } catch (err) {
-                console.error('❌ Error fetching data:', err);
-                alert(`Error fetching data: ${err.response?.data?.error || err.message}`);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        if (userId) {
-            fetchData();
+        if (Array.isArray(distributorsRes.data)) {
+          setDistributors(distributorsRes.data);
+        } else if (distributorsRes.data?.distributors) {
+          setDistributors(distributorsRes.data.distributors);
+        } else {
+          console.warn("⚠️ Unexpected distributors structure:", distributorsRes.data);
+          setDistributors([]);
         }
-    }, [userId]);
 
-    // ✅ Calculate available boxes
-    const handleBatchSelect = async (batchId) => {
-        setSelectedBatch(batchId);
-        try {
-            const selectedBatchData = batches.find(b => b.batchId === batchId);
-            if (selectedBatchData) {
-                const bigBoxCount = selectedBatchData.bigBoxCount
-                    ?? (selectedBatchData.bigCartonCount && selectedBatchData.bigBoxPerCarton
-                        ? selectedBatchData.bigCartonCount * selectedBatchData.bigBoxPerCarton
-                        : undefined)
-                    ?? (selectedBatchData.totalCartons && selectedBatchData.boxesPerCarton
-                        ? selectedBatchData.totalCartons * selectedBatchData.boxesPerCarton
-                        : 0);
-
-                const distributionsRes = await axios.get(`http://localhost:5000/api/distributions/by-manufacturer/${userId}`);
-                const batchDistributions = distributionsRes.data.filter(d => d.batchId === batchId);
-                const distributedBoxes = batchDistributions.reduce((sum, dist) => sum + Number(dist.bigBoxCount || 0), 0);
-                setAvailableBoxes((bigBoxCount || 0) - distributedBoxes);
-            }
-        } catch (err) {
-            console.error('Error calculating available boxes:', err);
-        }
+      } catch (error) {
+        console.error('❌ Error fetching data:', error);
+        toast.error('Failed to fetch data. Check console for details.');
+      } finally {
+        setLoading(false);
+      }
     };
 
-    // ✅ Handle distribution submission
-    const handleSubmit = async (e) => {
-        e.preventDefault();
+    fetchData();
+  }, [userId]);
 
-        if (!selectedBatch || !form.distributorId || !form.bigBoxCount) {
-            alert('Please fill all required fields');
-            return;
-        }
+  // ✅ STEP 3: Handle distribution submission
+  const handleDistribute = async (e) => {
+    e.preventDefault();
 
-        if (form.bigBoxCount > availableBoxes) {
-            alert(`Only ${availableBoxes} boxes available for distribution`);
-            return;
-        }
+    if (!selectedBatch || !selectedDistributor || !quantity) {
+      toast.warning('Please fill all fields before submitting.');
+      return;
+    }
 
-        try {
-            const selectedBatchData = batches.find(b => b.batchId === selectedBatch);
-            const selectedDistributor = distributors.find(d => d._id === form.distributorId);
-            const token = localStorage.getItem('token');
+    try {
+      setLoading(true);
+      const response = await axios.post('http://localhost:5000/api/distributions/distribute', {
+        batchId: selectedBatch,
+        distributorId: selectedDistributor,
+        quantity,
+        manufacturerId: userId
+      });
 
-            if (!token) throw new Error('Please login first');
+      if (response.status === 200) {
+        toast.success('Batch successfully distributed!');
+        // Reset form
+        setSelectedBatch('');
+        setSelectedDistributor('');
+        setQuantity('');
+      }
+    } catch (error) {
+      console.error('❌ Error distributing batch:', error);
+      toast.error('Failed to distribute batch. Please check console.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-            // ✅ Create distribution
-            const distributionRes = await axios.post('http://localhost:5000/api/distributions/create', {
-                batchId: selectedBatch,
-                medicineName: selectedBatchData.medicineName,
-                receiverId: form.distributorId,
-                receiverRole: 'Wholesaler',
-                bigBoxCount: parseInt(form.bigBoxCount),
-                expiryDate: selectedBatchData.expiryDate
-            }, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+  return (
+    <div className="batch-distributor-container">
+      <ToastContainer position="top-right" autoClose={3000} />
+      <h2>Distribute Batch to Distributor</h2>
 
-            // ✅ Generate QR code
-            const qrData = {
-                distributionId: distributionRes.data.distributionId,
-                batchId: selectedBatch,
-                medicineName: selectedBatchData.medicineName,
-                manufacturerWallet: userId,
-                distributorWallet: selectedDistributor.walletAddress,
-                bigBoxCount: parseInt(form.bigBoxCount),
-                expiryDate: selectedBatchData.expiryDate,
-                timestamp: new Date().toISOString()
-            };
+      {loading && <p className="loading-text">Loading...</p>}
 
-            const qrImageUrl = await QRCode.toDataURL(JSON.stringify(qrData));
-            setQrImage(qrImageUrl);
-
-            // ✅ Save QR code
-            await axios.post('http://localhost:5000/api/qrcodes', {
-                image: qrImageUrl,
-                distributionId: distributionRes.data.distributionId
-            });
-
-            alert('✅ Distribution created successfully!');
-
-            // Reset form
-            setForm({ distributorId: '', bigBoxCount: '' });
-            setSelectedBatch('');
-        } catch (err) {
-            console.error('❌ Distribution creation failed:', err);
-            alert(`Error creating distribution: ${err.response?.data?.error || err.message}`);
-        }
-    };
-
-    // ✅ Filter distributors
-    const filteredDistributors = distributors.filter(dist =>
-        dist.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        dist.email?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-
-    // ✅ Loading indicator
-    if (loading) return <p>Loading batches and distributors...</p>;
-
-    return (
-        <div className="batch-distributor">
-            <h2>Distribute Medicine Batch</h2>
-            <form onSubmit={handleSubmit}>
-                <select
-                    value={selectedBatch}
-                    onChange={(e) => handleBatchSelect(e.target.value)}
-                    required
-                >
-                    <option value="">Select Batch</option>
-                    {Array.isArray(batches) && batches.length > 0 ? (
-                        batches.map(batch => (
-                            <option key={batch.batchId} value={batch.batchId}>
-                                {batch.medicineName} (ID: {batch.batchId})
-                            </option>
-                        ))
-                    ) : (
-                        <option disabled>No batches found</option>
-                    )}
-                </select>
-
-                {selectedBatch && (
-                    <p>Available Boxes: {availableBoxes}</p>
-                )}
-
-                <input
-                    type="text"
-                    placeholder="Search distributors..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                />
-
-                <select
-                    name="distributorId"
-                    value={form.distributorId}
-                    onChange={(e) => setForm({ ...form, distributorId: e.target.value })}
-                    required
-                >
-                    <option value="">Select Distributor</option>
-                    {Array.isArray(filteredDistributors) && filteredDistributors.length > 0 ? (
-                        filteredDistributors.map(dist => (
-                            <option key={dist._id} value={dist._id}>
-                                {dist.name} - {dist.companyAddress}
-                            </option>
-                        ))
-                    ) : (
-                        <option disabled>No distributors found</option>
-                    )}
-                </select>
-
-                <input
-                    type="number"
-                    name="bigBoxCount"
-                    placeholder="Number of Big Boxes"
-                    value={form.bigBoxCount}
-                    onChange={(e) => setForm({ ...form, bigBoxCount: e.target.value })}
-                    max={availableBoxes}
-                    required
-                />
-
-                <button type="submit">Create Distribution</button>
-            </form>
-
-            {qrImage && (
-                <div className="qr-preview">
-                    <h3>Distribution QR Code:</h3>
-                    <img src={qrImage} alt="Distribution QR Code" />
-                    <p>This QR code contains all distribution details.</p>
-                </div>
+      <form onSubmit={handleDistribute} className="distribute-form">
+        {/* Select Batch */}
+        <div className="form-group">
+          <label htmlFor="batch">Select Batch:</label>
+          <select
+            id="batch"
+            value={selectedBatch}
+            onChange={(e) => setSelectedBatch(e.target.value)}
+          >
+            <option value="">-- Select a Batch --</option>
+            {batches.length > 0 ? (
+              batches.map((batch, i) => (
+                <option key={batch._id || batch.batchId || i} value={batch._id || batch.batchId}>
+                  {batch.medicineName
+                    ? `${batch.medicineName} (Batch ID: ${batch.batchId || batch._id})`
+                    : `Batch ${i + 1}`}
+                </option>
+              ))
+            ) : (
+              <option disabled>⚠️ No batches found</option>
             )}
+          </select>
+          <p style={{ fontSize: '0.9em', color: batches.length > 0 ? 'green' : 'red' }}>
+            {batches.length > 0
+              ? `✅ Found ${batches.length} batches for this user`
+              : '⚠️ No batches found for this user'}
+          </p>
         </div>
-    );
+
+        {/* Select Distributor */}
+        <div className="form-group">
+          <label htmlFor="distributor">Select Distributor:</label>
+          <select
+            id="distributor"
+            value={selectedDistributor}
+            onChange={(e) => setSelectedDistributor(e.target.value)}
+          >
+            <option value="">-- Select a Distributor --</option>
+            {distributors.length > 0 ? (
+              distributors.map((dist, i) => (
+                <option key={dist._id || dist.id || i} value={dist._id || dist.id}>
+                  {dist.name ? `${dist.name} (${dist.email || 'No email'})` : 'Unnamed Distributor'}
+                </option>
+              ))
+            ) : (
+              <option disabled>⚠️ No distributors found</option>
+            )}
+          </select>
+        </div>
+
+        {/* Quantity */}
+        <div className="form-group">
+          <label htmlFor="quantity">Quantity to Distribute:</label>
+          <input
+            type="number"
+            id="quantity"
+            value={quantity}
+            onChange={(e) => setQuantity(e.target.value)}
+            min="1"
+            placeholder="Enter quantity"
+          />
+        </div>
+
+        <button type="submit" className="distribute-btn" disabled={loading}>
+          {loading ? 'Processing...' : 'Distribute Batch'}
+        </button>
+      </form>
+    </div>
+  );
 };
 
 export default BatchDistributor;
